@@ -642,6 +642,7 @@ async function loadHalacha(boxId, rawTitle) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     doc.querySelectorAll('.mw-editsection, [class*="editsection"]').forEach(el => el.remove());
     doc.querySelectorAll('a').forEach(el => { if (el.textContent.trim() === 'עריכה') el.remove(); });
+    doc.querySelectorAll('sup, .reference, .mw-ref').forEach(el => el.remove());
 
     const dafusHeading = Array.from(doc.querySelectorAll('h3'))
       .find(h => h.textContent.trim() === 'דפוס');
@@ -659,21 +660,45 @@ async function loadHalacha(boxId, rawTitle) {
       text = chunks.join('\n\n');
     }
 
-    // SA fallback: find "שולחן ערוך" heading, collect until "מפרשים"
+    // helper: collect <p> text from el and nested children, skip empty
+    function collectP(el) {
+      const nodes = el.tagName === 'P' ? [el] : Array.from(el.querySelectorAll('p'));
+      return nodes.map(p => p.textContent.trim()).filter(Boolean);
+    }
+
+    // SA Case 1: seif-specific page — single h2 "שולחן ערוך", stop at first commentary heading
     if (!text) {
-      const allH = Array.from(doc.querySelectorAll('h2, h3'));
-      const saH  = allH.find(h => h.textContent.trim().includes('שולחן ערוך'));
-      const mefH = allH.find(h => h.textContent.trim().includes('מפרשים'));
-      if (saH) {
-        const startEl = saH.closest('.mw-heading') || saH.parentElement;
-        const stopEl  = mefH ? (mefH.closest('.mw-heading') || mefH.parentElement) : null;
-        let el = startEl.nextElementSibling;
+      const saH2 = Array.from(doc.querySelectorAll('h2'))
+        .find(h => h.textContent.trim() === 'שולחן ערוך');
+      if (saH2) {
+        const wrapper = saH2.closest('.mw-heading') || saH2;
+        let el = wrapper.nextElementSibling;
         const chunks = [];
-        while (el && el !== stopEl) {
-          if (el.classList.contains('mw-heading') || /^H[1-2]$/.test(el.tagName)) break;
-          const t = el.textContent.trim();
-          if (t) chunks.push(t);
+        while (el) {
+          if (el.classList.contains('mw-heading') || /^H[1-4]$/.test(el.tagName)) break;
+          chunks.push(...collectP(el));
           el = el.nextElementSibling;
+        }
+        text = chunks.join('\n');
+      }
+    }
+
+    // SA Case 2: siman page — multiple h2 "סעיף א/ב/..." headings
+    if (!text) {
+      const seifHeadings = Array.from(doc.querySelectorAll('h2'))
+        .filter(h => h.textContent.trim().startsWith('סעיף'));
+      if (seifHeadings.length) {
+        const chunks = [];
+        for (const h of seifHeadings) {
+          const wrapper = h.closest('.mw-heading') || h;
+          let el = wrapper.nextElementSibling;
+          const seifText = [];
+          while (el) {
+            if (el.classList.contains('mw-heading') || /^H[1-4]$/.test(el.tagName)) break;
+            seifText.push(...collectP(el));
+            el = el.nextElementSibling;
+          }
+          if (seifText.length) chunks.push(h.textContent.trim() + '\n' + seifText.join('\n'));
         }
         text = chunks.join('\n\n');
       }
