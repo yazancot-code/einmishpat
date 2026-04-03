@@ -45,7 +45,7 @@
       border: 1.5px solid #7ab3e0;
       border-radius: 14px;
       padding: 1.4rem 1.6rem;
-      margin-bottom: 1.8rem;
+      margin-bottom: 1rem;
       box-shadow: 0 2px 10px rgba(20,70,140,0.1);
     }
 
@@ -65,7 +65,7 @@
       letter-spacing: 0.02em;
     }
 
-    select, input[type="number"] {
+    select {
       padding: 0.48rem 0.7rem;
       border: 1.5px solid #5a9fd4;
       border-radius: 7px;
@@ -76,30 +76,32 @@
       direction: rtl;
       appearance: auto;
     }
-    select:focus, input:focus {
+    select:focus {
       outline: none;
       border-color: #1a3a6b;
       box-shadow: 0 0 0 3px rgba(26,58,107,0.18);
     }
-    #daf-num { width: 72px; }
 
-    .btn-search {
-      padding: 0.52rem 1.8rem;
+    /* ── Jump buttons ── */
+    .side-nav {
+      display: flex;
+      gap: 0.4rem;
+      align-items: flex-end;
+    }
+    .side-btn {
+      padding: 0.45rem 0.75rem;
       background: linear-gradient(135deg, #1a3a6b 0%, #2e5fa3 100%);
       color: #c8dff7;
       border: none;
-      border-radius: 8px;
+      border-radius: 7px;
       font-family: inherit;
-      font-size: 1.05rem;
+      font-size: 0.88rem;
       font-weight: bold;
       cursor: pointer;
       transition: filter 0.15s, transform 0.1s;
+      white-space: nowrap;
     }
-    .btn-search:hover:not(:disabled) {
-      filter: brightness(1.15);
-      transform: translateY(-1px);
-    }
-    .btn-search:disabled { opacity: 0.55; cursor: not-allowed; }
+    .side-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
     /* ── States ── */
     .loading-msg {
@@ -137,6 +139,9 @@
       color: #5a7ea8;
       font-size: 1.05rem;
     }
+
+    /* ── Side section ── */
+    .side-section { margin-bottom: 2.2rem; scroll-margin-top: 1rem; }
 
     /* ── Results ── */
     .results-title {
@@ -271,21 +276,15 @@
     <div class="selector-row">
       <div class="field">
         <label for="tractate">מסכת</label>
-        <select id="tractate"></select>
+        <select id="tractate" onchange="onTractateChange()"></select>
       </div>
       <div class="field">
         <label for="daf-num">דף</label>
-        <input type="number" id="daf-num" min="2" max="200" value="2">
+        <select id="daf-num" onchange="doSearch()"></select>
       </div>
-      <div class="field">
-        <label for="daf-side">עמוד</label>
-        <select id="daf-side">
-          <option value="א">א</option>
-          <option value="ב">ב</option>
-        </select>
-      </div>
-      <div class="field" style="justify-content:flex-end">
-        <button class="btn-search" id="btn-search" onclick="doSearch()">חפש הלכות</button>
+      <div class="side-nav" id="side-nav" style="display:none">
+        <button class="side-btn" onclick="jumpTo('side-aleph')">עמוד א</button>
+        <button class="side-btn" onclick="jumpTo('side-bet')">עמוד ב</button>
       </div>
     </div>
   </div>
@@ -307,13 +306,17 @@ const TRACTATES = [
   'כריתות','מעילה','תמיד','נדה'
 ];
 
-// Populate tractate dropdown
-const sel = document.getElementById('tractate');
-TRACTATES.forEach(t => {
-  const o = document.createElement('option');
-  o.value = o.textContent = t;
-  sel.appendChild(o);
-});
+// Last daf number for each tractate
+const DAF_MAX = {
+  'ברכות':64,'שבת':157,'עירובין':105,'פסחים':121,'יומא':88,
+  'סוכה':56,'ביצה':40,'ראש השנה':35,'תענית':31,'מגילה':32,
+  'מועד קטן':29,'חגיגה':27,'יבמות':122,'כתובות':112,'נדרים':91,
+  'נזיר':66,'סוטה':49,'גיטין':90,'קידושין':82,'בבא קמא':119,
+  'בבא מציעא':119,'בבא בתרא':176,'סנהדרין':113,'מכות':24,
+  'שבועות':49,'עבודה זרה':76,'הוריות':14,'זבחים':120,'מנחות':110,
+  'חולין':142,'בכורות':61,'ערכין':34,'תמורה':34,'כריתות':28,
+  'מעילה':22,'תמיד':33,'נדה':73
+};
 
 // ── Hebrew numerals ──────────────────────────────────────────
 function toHebrewNum(n) {
@@ -327,6 +330,41 @@ function toHebrewNum(n) {
   if (n === 16) return r + 'טז';
   if (n >= 10) { r += TENS[Math.floor(n/10)]; n %= 10; }
   return r + ONES[n];
+}
+
+// ── Populate tractate dropdown ───────────────────────────────
+const tractSel = document.getElementById('tractate');
+TRACTATES.forEach(t => {
+  const o = document.createElement('option');
+  o.value = o.textContent = t;
+  tractSel.appendChild(o);
+});
+
+// ── Build daf dropdown for a given tractate ──────────────────
+function buildDafDropdown(tractate) {
+  const max = DAF_MAX[tractate] || 64;
+  const dafSel = document.getElementById('daf-num');
+  dafSel.innerHTML = '';
+  for (let i = 2; i <= max; i++) {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = toHebrewNum(i);
+    dafSel.appendChild(o);
+  }
+}
+
+function onTractateChange() {
+  buildDafDropdown(document.getElementById('tractate').value);
+  doSearch();
+}
+
+// Initialize daf dropdown for first tractate
+buildDafDropdown(TRACTATES[0]);
+
+// ── Jump to section ──────────────────────────────────────────
+function jumpTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ── API helpers ──────────────────────────────────────────────
@@ -365,14 +403,10 @@ function extractEntries(html) {
   const entries = [];
 
   for (const p of doc.querySelectorAll('p')) {
-    // Entry letter: <big><b>X</b></big>
     const bigB = p.querySelector('big b');
     const letter = bigB ? bigB.textContent.trim() : null;
 
-    // All links in paragraph
     const links = Array.from(p.querySelectorAll('a'));
-
-    // Rambam links: href contains רמב (encoded: %D7%A8%D7%9E%D7%91) and הלכות (%D7%94%D7%9C%D7%9B%D7%95%D7%AA)
     const rambamLinks = links.filter(a => {
       const h = a.getAttribute('href') || '';
       return h.includes('%D7%94%D7%9C%D7%9B%D7%95%D7%AA') &&
@@ -381,29 +415,21 @@ function extractEntries(html) {
 
     if (!rambamLinks.length) continue;
 
-    // Deduplicate: prefer more-specific (longer) over prefix versions
     const seen = new Set();
     const refs = [];
-    // Sort descending by href length to process specific ones first
     const sorted = [...rambamLinks].sort((a, b) =>
       (b.getAttribute('href') || '').length - (a.getAttribute('href') || '').length
     );
     for (const a of sorted) {
       const href = a.getAttribute('href');
       const rawTitle = a.getAttribute('title') || decodeURIComponent(href.replace('/wiki/', '')).replace(/_/g, ' ');
-      // Skip if a more-specific version of this title already added
       const alreadyCovered = refs.some(r => r.rawTitle.startsWith(rawTitle) && r.rawTitle !== rawTitle);
       if (alreadyCovered) continue;
       if (seen.has(rawTitle)) continue;
       seen.add(rawTitle);
-      refs.push({
-        rawTitle,
-        linkText: a.textContent.trim(),
-        wsUrl: 'https://he.wikisource.org' + href
-      });
+      refs.push({ rawTitle, linkText: a.textContent.trim(), wsUrl: 'https://he.wikisource.org' + href });
     }
 
-    // Other sources text (non-Rambam visible content)
     const otherText = links
       .filter(a => !rambamLinks.includes(a))
       .map(a => a.textContent.trim())
@@ -415,17 +441,48 @@ function extractEntries(html) {
   return entries;
 }
 
+// ── Fetch entries for one side ───────────────────────────────
+async function fetchSide(tractate, dafHeb, side) {
+  const dafPage = `${tractate} ${dafHeb} ${side}`;
+  const dafWT = await fetchWikitext(dafPage);
+  if (!dafWT) return { side, dafPage, entries: null };
+
+  const matches = [...dafWT.matchAll(/\{\{קטע עם כותרת\|([^|]+)\|([^}]+)\}\}/g)];
+  const einRefs = matches
+    .filter(m => m[1].includes('עין משפט'))
+    .map(m => ({ chapterPage: m[1].trim(), sectionId: m[2].trim() }));
+
+  if (!einRefs.length) return { side, dafPage, entries: [] };
+
+  const allEntries = [];
+  for (const { chapterPage, sectionId } of einRefs) {
+    const cpWT = await fetchWikitext(chapterPage);
+    if (!cpWT) continue;
+
+    const escId = sectionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`<קטע התחלה=${escId}\\/>([\\s\\S]*?)<קטע סוף=${escId}\\/>`, 'g');
+    const sm = re.exec(cpWT);
+    if (!sm) continue;
+
+    const parsed = await apiPost({
+      action: 'parse', text: sm[1], title: chapterPage,
+      contentmodel: 'wikitext', prop: 'text',
+      disablelimitreport: '1', disableeditsection: '1'
+    });
+
+    const entries = extractEntries(parsed.parse?.text || '');
+    allEntries.push(...entries);
+  }
+
+  return { side, dafPage, entries: allEntries };
+}
+
 // ── Parse title into display label ──────────────────────────
-// Title format: "רמב"ם הלכות X פרק-num הלכה-num"
-// e.g. "רמב"ם הלכות קריאת שמע א ט"
 function parseRambamTitle(rawTitle) {
-  // rawTitle might be: "רמב"ם הלכות קריאת שמע א" or "רמב"ם הלכות קריאת שמע א ט"
   const m = rawTitle.match(/הלכות\s+(.+)/);
   if (!m) return rawTitle;
-  const rest = m[1].trim(); // e.g. "קריאת שמע א ט"
+  const rest = m[1].trim();
   const parts = rest.split(/\s+/);
-  // last 1-2 parts might be Hebrew letters (chapter/halacha)
-  // heuristic: if last part is 1-3 chars and all Hebrew letters, it's halacha
   const isHebLetter = s => /^[א-ת"]+$/.test(s) && s.length <= 4;
 
   let hilchot, chapter, halacha;
@@ -438,9 +495,7 @@ function parseRambamTitle(rawTitle) {
     hilchot = parts.slice(0, -1).join(' ');
     halacha = null;
   } else {
-    hilchot = rest;
-    chapter = null;
-    halacha = null;
+    hilchot = rest; chapter = null; halacha = null;
   }
 
   let label = 'הלכות ' + hilchot;
@@ -449,73 +504,94 @@ function parseRambamTitle(rawTitle) {
   return label;
 }
 
-// ── Main search ──────────────────────────────────────────────
+// ── Main search — fetches both sides ────────────────────────
+let currentSearch = 0;
+
 async function doSearch() {
   const tractate = document.getElementById('tractate').value;
-  const dafNum = parseInt(document.getElementById('daf-num').value, 10);
-  const dafSide = document.getElementById('daf-side').value;
+  const dafNum   = parseInt(document.getElementById('daf-num').value, 10);
+  if (!tractate || !dafNum) return;
 
-  if (!dafNum || dafNum < 2) { showError('מספר הדף חייב להיות לפחות 2'); return; }
-
+  const searchId = ++currentSearch;
   const dafHeb = toHebrewNum(dafNum);
-  const dafPage = `${tractate} ${dafHeb} ${dafSide}`;
 
-  const btn = document.getElementById('btn-search');
-  btn.disabled = true;
-  showLoading(`מחפש עין משפט לדף ${dafPage}…`);
+  document.getElementById('side-nav').style.display = 'none';
+  showLoading(`טוען דף ${tractate} ${dafHeb}…`);
 
   try {
-    // 1. Fetch daf page wikitext
-    const dafWT = await fetchWikitext(dafPage);
-    if (!dafWT) { showError(`הדף "${dafPage}" לא נמצא בויקיטקסט`); return; }
+    const [resAleph, resBet] = await Promise.all([
+      fetchSide(tractate, dafHeb, 'א'),
+      fetchSide(tractate, dafHeb, 'ב')
+    ]);
 
-    // 2. Find עין משפט chapter-page references
-    const matches = [...dafWT.matchAll(/\{\{קטע עם כותרת\|([^|]+)\|([^}]+)\}\}/g)];
-    const einRefs = matches
-      .filter(m => m[1].includes('עין משפט'))
-      .map(m => ({ chapterPage: m[1].trim(), sectionId: m[2].trim() }));
+    if (searchId !== currentSearch) return; // stale
 
-    if (!einRefs.length) { showError('לא נמצא עין משפט לדף זה'); return; }
-
-    // 3. For each chapter page, fetch wikitext and extract the section
-    const allEntries = [];
-    for (const { chapterPage, sectionId } of einRefs) {
-      showLoading(`טוען ${chapterPage}…`);
-      const cpWT = await fetchWikitext(chapterPage);
-      if (!cpWT) continue;
-
-      // Extract section between <קטע התחלה=X/> and <קטע סוף=X/>
-      const esc = sectionId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp(`<קטע התחלה=${esc}\\/>([\\s\\S]*?)<קטע סוף=${esc}\\/>`, 'g');
-      const sm = re.exec(cpWT);
-      if (!sm) continue;
-
-      // 4. Render section wikitext via API
-      showLoading('מעבד הלכות…');
-      const parsed = await apiPost({
-        action: 'parse',
-        text: sm[1],
-        title: chapterPage,
-        contentmodel: 'wikitext',
-        prop: 'text',
-        disablelimitreport: '1',
-        disableeditsection: '1'
-      });
-
-      const html = parsed.parse?.text || '';
-      const entries = extractEntries(html);
-      allEntries.push(...entries);
-    }
-
-    if (!allEntries.length) { showEmpty(dafPage); return; }
-    renderResults(allEntries, dafPage);
+    renderBothSides(resAleph, resBet);
+    document.getElementById('side-nav').style.display = 'flex';
 
   } catch (err) {
+    if (searchId !== currentSearch) return;
     console.error(err);
     showError('שגיאה: ' + err.message);
-  } finally {
-    btn.disabled = false;
   }
+}
+
+// ── Render both sides ────────────────────────────────────────
+function renderBothSides(resAleph, resBet) {
+  const toFetch = [];
+  let html = '';
+
+  for (const { side, dafPage, entries } of [
+    { ...resAleph, anchorId: 'side-aleph' },
+    { ...resBet,   anchorId: 'side-bet'   }
+  ]) {
+    const anchorId = side === 'א' ? 'side-aleph' : 'side-bet';
+    html += `<div class="side-section" id="${anchorId}">`;
+    html += `<div class="results-title">עמוד ${esc(side)} &nbsp;–&nbsp; <span class="daf-badge">${esc(dafPage)}</span></div>`;
+
+    if (entries === null) {
+      html += `<div class="error-box">הדף "${esc(dafPage)}" לא נמצא בויקיטקסט</div>`;
+    } else if (entries.length === 0) {
+      html += `<div class="empty-msg">לא נמצאו הלכות רמב"ם לעמוד זה</div>`;
+    } else {
+      html += `<div class="entries">`;
+      entries.forEach((entry, ei) => {
+        html += `<div class="entry">
+          <div class="entry-head">
+            <div class="entry-letter">${esc(entry.letter || toHebrewNum(ei + 1))}</div>
+            <div class="entry-dm">ד"מ – עין משפט</div>
+          </div>
+          <div class="entry-body">`;
+
+        entry.refs.forEach((ref, ri) => {
+          const boxId = `hbox-${side}-${ei}-${ri}`;
+          const label = parseRambamTitle(ref.rawTitle);
+          toFetch.push({ boxId, rawTitle: ref.rawTitle });
+          html += `<div class="rambam-ref">
+            <div class="ref-header">
+              <div class="ref-title">📖 ${esc(label)}</div>
+              <div class="ref-actions">
+                <a href="${esc(ref.wsUrl)}" target="_blank" rel="noopener" class="link-ws">ויקיטקסט ↗</a>
+              </div>
+            </div>
+            <div class="halacha-box loading" id="${boxId}">טוען…</div>
+          </div>`;
+        });
+
+        html += `</div>`;
+        if (entry.otherText) {
+          html += `<div class="other-sources">מקורות נוספים: ${esc(entry.otherText)}</div>`;
+        }
+        html += `</div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  document.getElementById('results').innerHTML = html;
+  toFetch.forEach(({ boxId, rawTitle }) => loadHalacha(boxId, rawTitle));
 }
 
 // ── Fetch and display a single halacha into its box ─────────
@@ -524,27 +600,21 @@ async function loadHalacha(boxId, rawTitle) {
   if (!box) return;
   try {
     const d = await apiGet({
-      action: 'parse',
-      page: rawTitle,
-      prop: 'text',
-      disablelimitreport: '1',
-      disableeditsection: '1'
+      action: 'parse', page: rawTitle, prop: 'text',
+      disablelimitreport: '1', disableeditsection: '1'
     });
 
     const html = d.parse?.text || '';
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    // Find h3 whose text is "דפוס" (match by text content, not id, to avoid encoding issues)
     const dafusHeading = Array.from(doc.querySelectorAll('h3'))
       .find(h => h.textContent.trim() === 'דפוס');
     let text = '';
     if (dafusHeading) {
-      // The h3 is inside <div class="mw-heading">; we need that div's next siblings
       const wrapper = dafusHeading.closest('.mw-heading') || dafusHeading.parentElement;
       let el = wrapper.nextElementSibling;
       const chunks = [];
       while (el) {
-        // Stop at the next heading wrapper or bare heading tag
         if (el.classList.contains('mw-heading') || /^H[2-4]$/.test(el.tagName)) break;
         const t = el.textContent.trim();
         if (t) chunks.push(t);
@@ -570,63 +640,15 @@ function showError(msg) {
   document.getElementById('results').innerHTML =
     `<div class="error-box">${esc(msg)}</div>`;
 }
-function showEmpty(dafPage) {
-  document.getElementById('results').innerHTML =
-    `<div class="empty-msg">לא נמצאו הלכות רמב"ם עבור דף ${esc(dafPage)}</div>`;
-}
-
-function renderResults(entries, dafPage) {
-  // Collect all (boxId, rawTitle) pairs to auto-fetch after DOM is ready
-  const toFetch = [];
-
-  let html = `<div class="results-title">
-    הלכות רמב"ם &nbsp;–&nbsp;
-    <span class="daf-badge">${esc(dafPage)}</span>
-  </div>
-  <div class="entries">`;
-
-  entries.forEach((entry, ei) => {
-    html += `<div class="entry">
-      <div class="entry-head">
-        <div class="entry-letter">${esc(entry.letter || toHebrewNum(ei + 1))}</div>
-        <div class="entry-dm">ד"מ – עין משפט</div>
-      </div>
-      <div class="entry-body">`;
-
-    entry.refs.forEach((ref, ri) => {
-      const boxId = `hbox-${ei}-${ri}`;
-      const label = parseRambamTitle(ref.rawTitle);
-      toFetch.push({ boxId, rawTitle: ref.rawTitle });
-      html += `<div class="rambam-ref">
-        <div class="ref-header">
-          <div class="ref-title">📖 ${esc(label)}</div>
-          <div class="ref-actions">
-            <a href="${esc(ref.wsUrl)}" target="_blank" rel="noopener" class="link-ws">ויקיטקסט ↗</a>
-          </div>
-        </div>
-        <div class="halacha-box loading" id="${boxId}">טוען…</div>
-      </div>`;
-    });
-
-    html += '</div>';
-    if (entry.otherText) {
-      html += `<div class="other-sources">מקורות נוספים: ${esc(entry.otherText)}</div>`;
-    }
-    html += '</div>';
-  });
-
-  html += '</div>';
-  document.getElementById('results').innerHTML = html;
-
-  // Fetch all halachot in parallel — DOM is ready at this point
-  toFetch.forEach(({ boxId, rawTitle }) => loadHalacha(boxId, rawTitle));
-}
 
 function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// Auto-load on startup
+doSearch();
 </script>
 </body>
 </html>
