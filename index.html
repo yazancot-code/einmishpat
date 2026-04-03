@@ -206,6 +206,15 @@
       overflow: hidden;
     }
 
+    /* ── Shulchan Aruch ref card ── */
+    .sa-ref {
+      background: #f0f7ee;
+      border: 1px solid #7abf8e;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .sa-ref .halacha-box { border-right-color: #2d7a4a; }
+
     .ref-header {
       display: flex;
       align-items: center;
@@ -412,26 +421,37 @@ function extractEntries(html) {
       return h.includes('%D7%94%D7%9C%D7%9B%D7%95%D7%AA') &&
              (h.includes('%D7%A8%D7%9E%D7%91') || h.includes('רמב'));
     });
+    const saLinks = links.filter(a => {
+      const h = a.getAttribute('href') || '';
+      return h.includes('%D7%A9%D7%95%D7%9C%D7%97%D7%9F_%D7%A2%D7%A8%D7%95%D7%9A') ||
+             h.includes('שולחן_ערוך');
+    });
 
-    if (!rambamLinks.length) continue;
+    if (!rambamLinks.length && !saLinks.length) continue;
 
     const seen = new Set();
     const refs = [];
-    const sorted = [...rambamLinks].sort((a, b) =>
-      (b.getAttribute('href') || '').length - (a.getAttribute('href') || '').length
-    );
-    for (const a of sorted) {
-      const href = a.getAttribute('href');
-      const rawTitle = a.getAttribute('title') || decodeURIComponent(href.replace('/wiki/', '')).replace(/_/g, ' ');
-      const alreadyCovered = refs.some(r => r.rawTitle.startsWith(rawTitle) && r.rawTitle !== rawTitle);
-      if (alreadyCovered) continue;
-      if (seen.has(rawTitle)) continue;
-      seen.add(rawTitle);
-      refs.push({ rawTitle, linkText: a.textContent.trim(), wsUrl: 'https://he.wikisource.org' + href });
-    }
 
+    function addRefs(linkList, type) {
+      const sorted = [...linkList].sort((a, b) =>
+        (b.getAttribute('href') || '').length - (a.getAttribute('href') || '').length
+      );
+      for (const a of sorted) {
+        const href = a.getAttribute('href');
+        const rawTitle = a.getAttribute('title') || decodeURIComponent(href.replace('/wiki/', '')).replace(/_/g, ' ');
+        const alreadyCovered = refs.some(r => r.rawTitle.startsWith(rawTitle) && r.rawTitle !== rawTitle);
+        if (alreadyCovered) continue;
+        if (seen.has(rawTitle)) continue;
+        seen.add(rawTitle);
+        refs.push({ rawTitle, linkText: a.textContent.trim(), wsUrl: 'https://he.wikisource.org' + href, type });
+      }
+    }
+    addRefs(rambamLinks, 'rambam');
+    addRefs(saLinks, 'sa');
+
+    const sourceLinks = [...rambamLinks, ...saLinks];
     const otherText = links
-      .filter(a => !rambamLinks.includes(a))
+      .filter(a => !sourceLinks.includes(a))
       .map(a => a.textContent.trim())
       .filter(Boolean)
       .join('، ');
@@ -498,10 +518,25 @@ function parseRambamTitle(rawTitle) {
     hilchot = rest; chapter = null; halacha = null;
   }
 
-  let label = 'הלכות ' + hilchot;
+  let label = 'רמב"ם הלכות ' + hilchot;
   if (chapter) label += ', פרק ' + chapter;
   if (halacha) label += ', הלכה ' + halacha;
   return label;
+}
+
+// ── Parse Shulchan Aruch title ───────────────────────────────
+function parseShulchanAruchTitle(rawTitle) {
+  const sections = ['אורח חיים', 'יורה דעה', 'אבן העזר', 'חושן משפט'];
+  for (const sec of sections) {
+    if (rawTitle.includes(sec)) {
+      const parts = rawTitle.split(sec)[1].trim().split(/\s+/).filter(Boolean);
+      let label = 'שו"ע ' + sec;
+      if (parts[0]) label += ' ' + parts[0];
+      if (parts[1]) label += ':' + parts[1];
+      return label;
+    }
+  }
+  return rawTitle;
 }
 
 // ── Main search — fetches both sides ────────────────────────
@@ -552,27 +587,26 @@ function renderBothSides(resAleph, resBet) {
     if (entries === null) {
       html += `<div class="error-box">הדף "${esc(dafPage)}" לא נמצא בויקיטקסט</div>`;
     } else if (entries.length === 0) {
-      html += `<div class="empty-msg">לא נמצאו הלכות רמב"ם לעמוד זה</div>`;
+      html += `<div class="empty-msg">לא נמצאו הלכות רמב"ם או שו"ע לעמוד זה</div>`;
     } else {
       html += `<div class="entries">`;
       entries.forEach((entry, ei) => {
         html += `<div class="entry">
           <div class="entry-head">
             <div class="entry-letter">${esc(entry.letter || toHebrewNum(ei + 1))}</div>
-            <div class="entry-dm">ד"מ – עין משפט</div>
           </div>
           <div class="entry-body">`;
 
         entry.refs.forEach((ref, ri) => {
           const boxId = `hbox-${side}-${ei}-${ri}`;
-          const label = parseRambamTitle(ref.rawTitle);
+          const isRambam = ref.type !== 'sa';
+          const refClass = isRambam ? 'rambam-ref' : 'sa-ref';
+          const icon     = isRambam ? '📖' : '⚖️';
+          const label    = isRambam ? parseRambamTitle(ref.rawTitle) : parseShulchanAruchTitle(ref.rawTitle);
           toFetch.push({ boxId, rawTitle: ref.rawTitle });
-          html += `<div class="rambam-ref">
+          html += `<div class="${refClass}">
             <div class="ref-header">
-              <div class="ref-title">📖 ${esc(label)}</div>
-              <div class="ref-actions">
-                <a href="${esc(ref.wsUrl)}" target="_blank" rel="noopener" class="link-ws">ויקיטקסט ↗</a>
-              </div>
+              <div class="ref-title">${icon} ${esc(label)}</div>
             </div>
             <div class="halacha-box loading" id="${boxId}">טוען…</div>
           </div>`;
@@ -606,6 +640,8 @@ async function loadHalacha(boxId, rawTitle) {
 
     const html = d.parse?.text || '';
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('.mw-editsection, [class*="editsection"]').forEach(el => el.remove());
+    doc.querySelectorAll('a').forEach(el => { if (el.textContent.trim() === 'עריכה') el.remove(); });
 
     const dafusHeading = Array.from(doc.querySelectorAll('h3'))
       .find(h => h.textContent.trim() === 'דפוס');
@@ -623,8 +659,27 @@ async function loadHalacha(boxId, rawTitle) {
       text = chunks.join('\n\n');
     }
 
+    // SA fallback: find "שולחן ערוך" heading, collect until "מפרשים"
+    if (!text) {
+      const allH = Array.from(doc.querySelectorAll('h2, h3'));
+      const saH  = allH.find(h => h.textContent.trim().includes('שולחן ערוך'));
+      const mefH = allH.find(h => h.textContent.trim().includes('מפרשים'));
+      if (saH) {
+        const startEl = saH.closest('.mw-heading') || saH.parentElement;
+        const stopEl  = mefH ? (mefH.closest('.mw-heading') || mefH.parentElement) : null;
+        let el = startEl.nextElementSibling;
+        const chunks = [];
+        while (el && el !== stopEl) {
+          if (el.classList.contains('mw-heading') || /^H[1-2]$/.test(el.tagName)) break;
+          const t = el.textContent.trim();
+          if (t) chunks.push(t);
+          el = el.nextElementSibling;
+        }
+        text = chunks.join('\n\n');
+      }
+    }
     box.className = 'halacha-box';
-    box.textContent = text || 'לא נמצא טקסט דפוס';
+    box.textContent = text || 'לא נמצא טקסט';
   } catch {
     box.className = 'halacha-box';
     box.textContent = 'שגיאה בטעינת ההלכה';
