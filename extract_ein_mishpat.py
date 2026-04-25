@@ -7,7 +7,7 @@ Columns: daf, amud, entry_letter, local_letters, text
 Usage:
     python3 extract_ein_mishpat.py
 
-Expects niddah_pdfs/ directory (run download_niddah.py first).
+Expects tractate_pdfs/ directory (run download_tractates.py first).
 """
 
 import csv
@@ -65,7 +65,7 @@ ENTRY_GLOBAL_SIZE = 8.4     # Vilna,Bold global entry markers
 ENTRY_LOCAL_SIZE  = 7.4     # FrankRuehl_Shas,Bold local entry markers
 SIZE_TOL          = 0.5     # tolerance for size comparisons
 
-PDF_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "niddah_pdfs")
+PDF_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tractate_pdfs", "niddah")
 OUT_CSV  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ein_mishpat_niddah.csv")
 LAST_DAF = 73
 
@@ -101,14 +101,13 @@ def to_hebrew(raw_visual: str) -> str:
 
 # ---------------------------------------------------------------------------
 
-def find_ein_mishpat_column(all_spans, page_width):
+def find_ein_mishpat_header(all_spans, page_width):
     """
-    Locate the עין משפט נר מצוה section on the page.
-    Returns (header_y, col_x0, col_x1) or None if not found.
+    Locate the עין משפט נר מצוה header on the page.
+    Returns (header_y, header_x, is_left_side) or None if not found.
 
     Strategy: find a Vilna non-bold span at section-header size that contains
-    the characteristic 'ÔÈÚ' glyph sequence, then use its x-position to
-    decide which margin column (left ≈ 0–90, right ≈ 510–600) this is in.
+    the characteristic 'ÔÈÚ' glyph sequence.
     """
     for s in sorted(all_spans, key=lambda s: s['y']):
         font, sz, text = s['font'], s['size'], s['text']
@@ -116,28 +115,61 @@ def find_ein_mishpat_column(all_spans, page_width):
                 and abs(sz - SECTION_HDR_SIZE) < SIZE_TOL
                 and EIN_MISHPAT_GLYPH in text):
             cx = (s['x0'] + s['x1']) / 2
-            if cx < page_width / 2:
-                return s['y'], 0, 90          # left margin ('a' pages)
-            else:
-                return s['y'], 510, 600       # right margin ('b' pages)
+            is_left = cx < page_width / 2
+            return s['y'], s['x0'], is_left
     return None
 
 
-def find_section_end(all_spans, header_y, col_x0, col_x1):
+def detect_column_bounds(header_x, page_width, is_left_side):
+    """
+    Define column boundaries based on header position.
+    Returns (col_x0, col_x1).
+
+    Strategy: Use the header x-position as anchor. The margin column is
+    approximately 90-100px wide from the page edge. Content starts at the
+    edge and extends slightly past the header position.
+    """
+    # Margin width is roughly 14% of page width (~90px for 643px page)
+    margin_width = page_width * 0.14
+
+    if is_left_side:
+        # Left margin: from edge to just past header
+        col_x0 = 0
+        col_x1 = header_x + 35  # header at ~55-65, extend to ~90-100
+    else:
+        # Right margin: from just before header to edge
+        col_x0 = header_x - 35
+        col_x1 = page_width
+
+    return col_x0, col_x1
+
+
+def find_section_end(all_spans, header_y, page_width, is_left_side):
     """
     Find the y-coordinate where the עין משפט section ends.
     Looks for the NEXT Vilna non-bold section-header-sized span in the same
-    margin column that appears more than 20pt below the header.
+    margin area that appears more than 20pt below the header.
     """
+    # Define margin boundaries (roughly 15% of page width on each side)
+    margin_boundary = page_width * 0.18
+
     for s in sorted(all_spans, key=lambda s: s['y']):
         if s['y'] <= header_y + 20:
             continue
         font, sz, text = s['font'], s['size'], s['text']
-        if (s['x0'] >= col_x0 and s['x1'] <= col_x1          # contained in column
-                and 'Vilna' in font and 'Bold' not in font
+        if not ('Vilna' in font and 'Bold' not in font
                 and abs(sz - SECTION_HDR_SIZE) < SIZE_TOL
                 and text.strip()):
-            return s['y']
+            continue
+        # Check if span is actually in the margin area, not just left/right of center
+        if is_left_side:
+            # Left margin: span should start near left edge
+            if s['x0'] < margin_boundary:
+                return s['y']
+        else:
+            # Right margin: span should start near right edge
+            if s['x0'] > page_width - margin_boundary:
+                return s['y']
     return float('inf')
 
 
@@ -168,22 +200,27 @@ def extract_ein_mishpat(pdf_path: str):
 
     all_spans.sort(key=lambda s: (round(s['y']), s['x0']))
 
-    # Find the Ein Mishpat section location
-    loc = find_ein_mishpat_column(all_spans, page_width)
-    if loc is None:
+    # Find the Ein Mishpat header
+    header_info = find_ein_mishpat_header(all_spans, page_width)
+    if header_info is None:
         doc.close()
         return []
 
-    header_y, col_x0, col_x1 = loc
-    end_y = find_section_end(all_spans, header_y, col_x0, col_x1)
+    header_y, header_x, is_left_side = header_info
+
+    # Define column bounds based on header position
+    col_x0, col_x1 = detect_column_bounds(header_x, page_width, is_left_side)
+
+    # Find section end (next section header in the margin)
+    end_y = find_section_end(all_spans, header_y, page_width, is_left_side)
 
     # Collect content spans inside the column, between header and next section.
-    # Require BOTH edges within the column (not just overlapping) to exclude
-    # main-body text spans that start at the column boundary but extend far right.
+    # Filter by x0 (where span starts), not x1, since Rashi text spans
+    # start in the margin but can extend into the main text area.
     content = [
         s for s in all_spans
         if (s['y'] > header_y + 15 and s['y'] < end_y
-            and s['x0'] >= col_x0 and s['x1'] <= col_x1)
+            and s['x0'] >= col_x0 and s['x0'] <= col_x1)
     ]
 
     # Group spans into lines by rounded y

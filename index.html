@@ -312,7 +312,7 @@ const TRACTATES = [
   'בבא קמא','בבא מציעא','בבא בתרא','סנהדרין','מכות',
   'שבועות','עבודה זרה','הוריות',
   'זבחים','מנחות','חולין','בכורות','ערכין','תמורה',
-  'כריתות','מעילה','תמיד','נדה'
+  'כריתות','מעילה','תמיד'
 ];
 
 // Last daf number for each tractate
@@ -324,7 +324,7 @@ const DAF_MAX = {
   'בבא מציעא':119,'בבא בתרא':176,'סנהדרין':113,'מכות':24,
   'שבועות':49,'עבודה זרה':76,'הוריות':14,'זבחים':120,'מנחות':110,
   'חולין':142,'בכורות':61,'ערכין':34,'תמורה':34,'כריתות':28,
-  'מעילה':22,'תמיד':33,'נדה':73
+  'מעילה':22,'תמיד':33
 };
 
 // ── Hebrew numerals ──────────────────────────────────────────
@@ -546,7 +546,6 @@ async function doSearch() {
   const tractate = document.getElementById('tractate').value;
   const dafNum   = parseInt(document.getElementById('daf-num').value, 10);
   if (!tractate || !dafNum) return;
-
   const searchId = ++currentSearch;
   const dafHeb = toHebrewNum(dafNum);
 
@@ -570,6 +569,7 @@ async function doSearch() {
     showError('שגיאה: ' + err.message);
   }
 }
+
 
 // ── Render both sides ────────────────────────────────────────
 function renderBothSides(resAleph, resBet) {
@@ -728,7 +728,11 @@ function esc(s) {
 }
 
 // Auto-load on startup
-doSearch();
+function init() {
+    doSearch();
+}
+
+init();
 </script>
 </body>
 </html>
