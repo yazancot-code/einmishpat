@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>עין משפט ונר מצוה</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'David', 'Frank Ruehl CLM', 'Times New Roman', serif;
+            background: #edf3fb;
+            color: #0d1f3c;
+            min-height: 100vh;
+            direction: rtl;
+        }
+
+        header {
+            background: linear-gradient(160deg, #1a3a6b 0%, #0d2145 100%);
+            color: #c8dff7;
+            padding: 2rem 1.5rem 1.5rem;
+            text-align: center;
+            border-bottom: 4px solid #4a90d9;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.4rem;
+        }
+
+        header p {
+            font-size: 1rem;
+            opacity: 0.82;
+        }
+
+        main {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 1.8rem 1.2rem;
+        }
+
+        /* ── Selector card ── */
+        .card {
+            background: #f5f9ff;
+            border: 1.5px solid #7ab3e0;
+            border-radius: 14px;
+            padding: 1.4rem 1.6rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(20, 70, 140, 0.1);
+        }
+
+        .selector-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem 1.4rem;
+            align-items: flex-end;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: bold;
+            color: #1a3a6b;
+            letter-spacing: 0.02em;
+        }
+
+        select {
+            padding: 0.48rem 0.7rem;
+            border: 1.5px solid #5a9fd4;
+            border-radius: 7px;
+            background: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            color: #0d1f3c;
+            direction: rtl;
+            appearance: auto;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #1a3a6b;
+            box-shadow: 0 0 0 3px rgba(26, 58, 107, 0.18);
+        }
+
+        /* ── Jump buttons ── */
+        .side-nav {
+            display: flex;
+            gap: 0.4rem;
+            align-items: flex-end;
+        }
+
+        .side-btn {
+            padding: 0.45rem 0.75rem;
+            background: linear-gradient(135deg, #1a3a6b 0%, #2e5fa3 100%);
+            color: #c8dff7;
+            border: none;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: filter 0.15s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .side-btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        /* ── States ── */
+        .loading-msg {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #1a3a6b;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #a8ccee;
+            border-top-color: #1a3a6b;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .text-truncated-note {
+            display: block;
+            margin-top: 0.5rem;
+            font-style: italic;
+            color: #1a3a6b;
+            font-size: 0.88rem;
+            opacity: 0.8;
+        }
+
+        .error-box {
+            background: #fff0f0;
+            border: 1.5px solid #e09090;
+            border-radius: 10px;
+            padding: 1.1rem 1.4rem;
+            color: #b00;
+            text-align: center;
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: #5a7ea8;
+            font-size: 1.05rem;
+        }
+
+        /* ── Side section ── */
+        .side-section {
+            margin-bottom: 2.2rem;
+            scroll-margin-top: 1rem;
+        }
+
+        /* ── Results ── */
+        .results-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0d2145;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #4a90d9;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .results-title .daf-badge {
+            background: #1a3a6b;
+            color: #c8dff7;
+            padding: 0.15rem 0.65rem;
+            border-radius: 20px;
+            font-size: 1rem;
+        }
+
+        .entries {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        /* ── Segment entry (one gemara segment) ── */
+        .entry {
+            background: #f5f9ff;
+            border: 1px solid #90bce0;
+            border-radius: 11px;
+            overflow: hidden;
+            box-shadow: 0 1px 5px rgba(20, 70, 140, 0.08);
+        }
+
+        .entry-head {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.7rem 1.1rem;
+            background: #deeaf8;
+            border-bottom: 1px solid #a8ccee;
+        }
+
+        .entry-seg-label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #0d2145;
+        }
+
+        .entry-body {
+            padding: 0.8rem 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        /* ── Rambam ref card ── */
+        .rambam-ref {
+            background: #e8f2fc;
+            border: 1px solid #7ab3e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* ── Tur ref card ── */
+        .tur-ref {
+            background: #fdf6e8;
+            border: 1px solid #d4a84b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tur-ref .halacha-box {
+            border-right-color: #b07d20;
+        }
+
+        /* ── SMaG ref card ── */
+        .smag-ref {
+            background: #f3edf8;
+            border: 1px solid #9b7ec8;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .smag-ref .halacha-box {
+            border-right-color: #6b45a8;
+        }
+
+        /* ── Shulchan Aruch ref card ── */
+        .sa-ref {
+            background: #f0f7ee;
+            border: 1px solid #7abf8e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .sa-ref .halacha-box {
+            border-right-color: #2d7a4a;
+        }
+
+        /* ── Ben Yehoyada ref card ── */
+        .benyehoyada-ref {
+            background: #fff8ee;
+            border: 1px solid #e0a84b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .benyehoyada-ref .halacha-box {
+            border-right-color: #c07820;
+        }
+
+        /* ── Benayahu ref card ── */
+        .benayahu-ref {
+            background: #f5f0fb;
+            border: 1px solid #b07ed4;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .benayahu-ref .halacha-box {
+            border-right-color: #7a3aad;
+        }
+
+        /* ── Commentary section divider ── */
+        .commentary-divider {
+            font-size: 0.82rem;
+            font-weight: bold;
+            color: #5a7ea8;
+            letter-spacing: 0.04em;
+            padding: 0.3rem 0.2rem 0.1rem;
+            border-top: 1px dashed #b0cce8;
+            margin-top: 0.3rem;
+        }
+
+        .ref-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+            padding: 0.55rem 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .ref-title {
+            font-weight: bold;
+            font-size: 0.97rem;
+            color: #0d2145;
+            flex: 1;
+        }
+
+        .ref-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .link-ws {
+            font-size: 0.78rem;
+            color: #1a3a6b;
+            text-decoration: none;
+            padding: 0.2rem 0.5rem;
+            border: 1px solid #7ab3e0;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .link-ws:hover {
+            background: #c0daef;
+        }
+
+        .halacha-box {
+            display: block;
+            padding: 0.8rem 1rem;
+            background: #fafdff;
+            border-top: 1px solid #a8ccee;
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #0d1f3c;
+            border-right: 4px solid #1a3a6b;
+            white-space: pre-wrap;
+        }
+
+        .halacha-box.loading {
+            color: #7a9fc0;
+            font-style: italic;
+        }
+
+        @media (max-width: 560px) {
+            header h1 {
+                font-size: 1.6rem;
+            }
+
+            .selector-row {
+                gap: 0.7rem;
+            }
+
+            .ref-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>עין משפט ונר מצוה</h1>
+        <p>בחר דף גמרא וקבל את ההלכות המקושרות</p>
+    </header>
+
+    <main>
+        <div class="card">
+            <div class="selector-row">
+                <div class="field">
+                    <label for="tractate">מסכת</label>
+                    <select id="tractate" onchange="onTractateChange()"></select>
+                </div>
+                <div class="field">
+                    <label for="daf-num">דף</label>
+                    <select id="daf-num" onchange="doSearch()"></select>
+                </div>
+                <div class="side-nav" id="side-nav" style="display:none">
+                    <button class="side-btn" onclick="jumpTo('side-aleph')">עמוד א</button>
+                    <button class="side-btn" onclick="jumpTo('side-bet')">עמוד ב</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </main>
+
+    <script>
+        // ── Constants ────────────────────────────────────────────────
+        const SEFARIA_BASE = 'https://www.sefaria.org';
+
+        const TRACTATES = [
+            'ברכות',
+            'שבת', 'עירובין', 'פסחים', 'יומא', 'סוכה', 'ביצה',
+            'ראש השנה', 'תענית', 'מגילה', 'מועד קטן', 'חגיגה',
+            'יבמות', 'כתובות', 'נדרים', 'נזיר', 'סוטה', 'גיטין', 'קידושין',
+            'בבא קמא', 'בבא מציעא', 'בבא בתרא', 'סנהדרין', 'מכות',
+            'שבועות', 'עבודה זרה', 'הוריות',
+            'זבחים', 'מנחות', 'חולין', 'בכורות', 'ערכין', 'תמורה',
+            'כריתות', 'מעילה', 'תמיד',
+            'נדה'
+        ];
+
+        const DAF_MAX = {
+            'ברכות': 64, 'שבת': 157, 'עירובין': 105, 'פסחים': 121, 'יומא': 88,
+            'סוכה': 56, 'ביצה': 40, 'ראש השנה': 35, 'תענית': 31, 'מגילה': 32,
+            'מועד קטן': 29, 'חגיגה': 27, 'יבמות': 122, 'כתובות': 112, 'נדרים': 91,
+            'נזיר': 66, 'סוטה': 49, 'גיטין': 90, 'קידושין': 82, 'בבא קמא': 119,
+            'בבא מציעא': 119, 'בבא בתרא': 176, 'סנהדרין': 113, 'מכות': 24,
+            'שבועות': 49, 'עבודה זרה': 76, 'הוריות': 14, 'זבחים': 120, 'מנחות': 110,
+            'חולין': 142, 'בכורות': 61, 'ערכין': 34, 'תמורה': 34, 'כריתות': 28,
+            'מעילה': 22, 'תמיד': 33, 'נדה': 73
+        };
+
+        const TRACTATE_EN = {
+            'ברכות': 'Berakhot',
+            'שבת': 'Shabbat', 'עירובין': 'Eruvin', 'פסחים': 'Pesachim',
+            'יומא': 'Yoma', 'סוכה': 'Sukkah', 'ביצה': 'Beitzah',
+            'ראש השנה': 'Rosh Hashanah', 'תענית': "Ta'anit", 'מגילה': 'Megillah',
+            'מועד קטן': 'Moed Katan', 'חגיגה': 'Chagigah',
+            'יבמות': 'Yevamot', 'כתובות': 'Ketubot', 'נדרים': 'Nedarim',
+            'נזיר': 'Nazir', 'סוטה': 'Sotah', 'גיטין': 'Gittin', 'קידושין': 'Kiddushin',
+            'בבא קמא': 'Bava Kamma', 'בבא מציעא': 'Bava Metzia', 'בבא בתרא': 'Bava Batra',
+            'סנהדרין': 'Sanhedrin', 'מכות': 'Makkot',
+            'שבועות': 'Shevuot', 'עבודה זרה': 'Avodah Zarah', 'הוריות': 'Horayot',
+            'זבחים': 'Zevachim', 'מנחות': 'Menachot', 'חולין': 'Chullin',
+            'בכורות': 'Bekhorot', 'ערכין': 'Arakhin', 'תמורה': 'Temurah',
+            'כריתות': 'Keritot', 'מעילה': 'Meilah', 'תמיד': 'Tamid',
+            'נדה': 'Niddah'
+        };
+
+        // Book identification patterns (mirrors Python BOOK_PATTERNS)
+        const BOOK_PATTERNS = {
+            'Rambam': ['mishneh torah', 'rambam'],
+            'Tur': ['tur', 'arbaah turim'],
+            'SMaG': ['sefer mitzvot gadol', 'smag'],
+            'Shulchan Aruch': ['shulchan aruch', 'shulchan arukh', 'orach chayim',
+                'yoreh deah', 'even haezer', 'choshen mishpat']
+        };
+
+        // Commentary books to show (matched against sourceRef)
+        const COMMENTARY_PATTERNS = {
+            'Ben Yehoyada': ['ben yehoyada'],
+            'Benayahu': ['benayahu']
+        };
+
+        // CSS class per book
+        const BOOK_CLASS = {
+            'Rambam': 'rambam-ref',
+            'Tur': 'tur-ref',
+            'SMaG': 'smag-ref',
+            'Shulchan Aruch': 'sa-ref',
+            'Ben Yehoyada': 'benyehoyada-ref',
+            'Benayahu': 'benayahu-ref'
+        };
+
+        // Icon per book
+        const BOOK_ICON = {
+            'Rambam': '📘',
+            'Tur': '📙',
+            'SMaG': '📗',
+            'Shulchan Aruch': '📕',
+            'Ben Yehoyada': '📜',
+            'Benayahu': '📋'
+        };
+
+        // ── Hebrew numerals ──────────────────────────────────────────
+        function toHebrewNum(n) {
+            if (n <= 0) return '';
+            const ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+            const TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+            const HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
+            let r = '';
+            if (n >= 100) { r += HUNDREDS[Math.floor(n / 100)]; n %= 100; }
+            if (n === 15) return r + 'טו';
+            if (n === 16) return r + 'טז';
+            if (n >= 10) { r += TENS[Math.floor(n / 10)]; n %= 10; }
+            return r + ONES[n];
+        }
+
+        // ── Populate tractate dropdown ───────────────────────────────
+        const tractSel = document.getElementById('tractate');
+        TRACTATES.forEach(t => {
+            const o = document.createElement('option');
+            o.value = o.textContent = t;
+            tractSel.appendChild(o);
+        });
+
+        function buildDafDropdown(tractate) {
+            const max = DAF_MAX[tractate] || 64;
+            const dafSel = document.getElementById('daf-num');
+            dafSel.innerHTML = '';
+            for (let i = 2; i <= max; i++) {
+                const o = document.createElement('option');
+                o.value = i;
+                o.textContent = toHebrewNum(i);
+                dafSel.appendChild(o);
+            }
+        }
+
+        function onTractateChange() {
+            buildDafDropdown(document.getElementById('tractate').value);
+            doSearch();
+        }
+
+        buildDafDropdown(TRACTATES[0]);
+
+        function jumpTo(id) {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ── Sefaria helpers ──────────────────────────────────────────
+
+        function cleanHebrew(text) {
+            if (!text) return '';
+            return text.replace(/<[^>]+>/g, '').trim();
+        }
+
+        function identifyBook(ref) {
+            const refL = ref.toLowerCase();
+            for (const [book, patterns] of Object.entries(BOOK_PATTERNS)) {
+                for (const p of patterns) {
+                    if (refL.includes(p)) return book;
+                }
+            }
+            return null;
+        }
+
+        // Extract segment number from an anchorRef like "Pesachim 2b:3"
+        function extractSegment(anchorRef) {
+            const m = anchorRef.match(/:(\d+)$/);
+            return m ? parseInt(m[1], 10) : null;
+        }
+
+        // Build a TREF string for Sefaria, e.g. "Pesachim.2b"
+        function buildTref(tractateEn, dafNum, side) {
+            // side is 'א' or 'ב'
+            const sideEn = side === 'א' ? 'a' : 'b';
+            return `${tractateEn}.${dafNum}${sideEn}`;
+        }
+
+        // Build the mapping of segment → book → [{ref, heRef, text}]
+        // mirrors Python build_mapping()
+        function buildMapping(links, targetDafNorm) {
+            // mapping: Map<segNum, Map<bookName, Array<{heRef, text}>>>
+            const mapping = new Map();
+
+            for (const link of links) {
+                if (link.category !== 'Halakhah') continue;
+
+                const anchorRef = link.anchorRef || '';
+                const sourceRef = link.sourceRef || '';
+                const sourceHeRef = link.sourceHeRef || sourceRef;
+
+                // Only keep links that anchor to our target daf
+                if (!anchorRef.toLowerCase().includes(targetDafNorm)) continue;
+
+                const seg = extractSegment(anchorRef);
+                if (seg === null) continue;
+
+                // Identify book from the first part of sourceRef (before comma)
+                const bookPart = sourceRef.split(',')[0];
+                const book = identifyBook(bookPart);
+                if (!book) continue;
+
+                // Extract Hebrew text
+                let text = '';
+                const he = link.he;
+                if (Array.isArray(he)) {
+                    text = cleanHebrew(he.join(' '));
+                } else if (typeof he === 'string') {
+                    text = cleanHebrew(he);
+                }
+
+                if (!mapping.has(seg)) mapping.set(seg, new Map());
+                const segMap = mapping.get(seg);
+                if (!segMap.has(book)) segMap.set(book, []);
+                segMap.get(book).push({ heRef: sourceHeRef, text, sourceRef });
+            }
+
+            return mapping;
+        }
+
+        // Fetch text segments for a daf side
+        async function fetchDafText(tref) {
+            const url = `${SEFARIA_BASE}/api/v3/texts/${encodeURIComponent(tref)}?version=source&return_format=text_only`;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const data = await r.json();
+            if (data.versions && data.versions.length > 0) {
+                return data.versions[0].text || [];
+            }
+            return [];
+        }
+
+        // Fetch Halakhah links for a daf side
+        async function fetchLinks(tref) {
+            const url = `${SEFARIA_BASE}/api/links/${encodeURIComponent(tref)}?category=Halakhah`;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }
+
+        // Fetch Commentary links for a daf side (Ben Yehoyada, Benayahu)
+        async function fetchCommentaryLinks(tref) {
+            const url = `${SEFARIA_BASE}/api/links/${encodeURIComponent(tref)}?category=Commentary`;
+            const r = await fetch(url);
+            if (!r.ok) return [];
+            return r.json();
+        }
+
+        // Build commentary mapping: Map<segNum, Map<bookName, Array<{heRef, text, sourceRef}>>>
+        function buildCommentaryMapping(links, targetDafNorm) {
+            const mapping = new Map();
+
+            for (const link of links) {
+                const anchorRef = link.anchorRef || '';
+                const sourceRef = link.sourceRef || '';
+                const sourceHeRef = link.sourceHeRef || sourceRef;
+
+                if (!anchorRef.toLowerCase().includes(targetDafNorm)) continue;
+
+                const seg = extractSegment(anchorRef);
+                if (seg === null) continue;
+
+                // Match against commentary patterns
+                const sourceRefL = sourceRef.toLowerCase();
+                let matchedBook = null;
+                for (const [book, patterns] of Object.entries(COMMENTARY_PATTERNS)) {
+                    for (const p of patterns) {
+                        if (sourceRefL.includes(p)) { matchedBook = book; break; }
+                    }
+                    if (matchedBook) break;
+                }
+                if (!matchedBook) continue;
+
+                let text = '';
+                const he = link.he;
+                if (Array.isArray(he)) {
+                    text = cleanHebrew(he.join(' '));
+                } else if (typeof he === 'string') {
+                    text = cleanHebrew(he);
+                }
+
+                if (!mapping.has(seg)) mapping.set(seg, new Map());
+                const segMap = mapping.get(seg);
+                if (!segMap.has(matchedBook)) segMap.set(matchedBook, []);
+                segMap.get(matchedBook).push({ heRef: sourceHeRef, text, sourceRef });
+            }
+
+            return mapping;
+        }
+
+        // Fetch data for one side (א or ב) and build entries
+        async function fetchSide(tractateHe, dafNum, side) {
+            const tractateEn = TRACTATE_EN[tractateHe] || tractateHe;
+            const sideEn = side === 'א' ? 'a' : 'b';
+            const tref = `${tractateEn}.${dafNum}${sideEn}`;
+            const dafHeb = toHebrewNum(dafNum);
+
+            // targetDafNorm mirrors Python: normalize(TREF.replace(".", " "))
+            // e.g. "pesachim 2b"
+            const targetDafNorm = `${tractateEn.toLowerCase()} ${dafNum}${sideEn}`;
+
+            try {
+                const [textSegments, links, commentaryLinks] = await Promise.all([
+                    fetchDafText(tref),
+                    fetchLinks(tref),
+                    fetchCommentaryLinks(tref)
+                ]);
+
+                const mapping = buildMapping(links, targetDafNorm);
+                const commentaryMapping = buildCommentaryMapping(commentaryLinks, targetDafNorm);
+
+                // Build entries: one entry per segment that has Halakhah OR commentary links
+                const entries = [];
+                textSegments.forEach((segText, idx) => {
+                    const segNum = idx + 1;
+
+                    const refs = [];
+                    if (mapping.has(segNum)) {
+                        const bookMap = mapping.get(segNum);
+                        // Preferred display order
+                        for (const book of ['Rambam', 'Tur', 'SMaG', 'Shulchan Aruch']) {
+                            if (bookMap.has(book)) {
+                                for (const item of bookMap.get(book)) {
+                                    refs.push({ book, heRef: item.heRef, text: item.text, sourceRef: item.sourceRef });
+                                }
+                            }
+                        }
+                    }
+
+                    // Commentary refs for this segment (Ben Yehoyada, Benayahu)
+                    const commentaryRefs = [];
+                    if (commentaryMapping.has(segNum)) {
+                        const cMap = commentaryMapping.get(segNum);
+                        for (const book of ['Ben Yehoyada', 'Benayahu']) {
+                            if (cMap.has(book)) {
+                                for (const item of cMap.get(book)) {
+                                    commentaryRefs.push({ book, heRef: item.heRef, text: item.text, sourceRef: item.sourceRef });
+                                }
+                            }
+                        }
+                    }
+
+                    // Include segment if it has either Halakhah refs OR commentary refs
+                    if (refs.length > 0 || commentaryRefs.length > 0) {
+                        entries.push({ segNum, segText: cleanHebrew(segText), refs, commentaryRefs });
+                    }
+                });
+
+                return { side, dafHeb, tractateHe, entries, tref };
+
+            } catch (err) {
+                console.warn(`fetchSide failed for ${tref}:`, err);
+                return { side, dafHeb, tractateHe, entries: null, tref };
+            }
+        }
+
+        // ── Render ──────────────────────────────────────────────────
+        function esc(s) {
+            return String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function sefariaUrl(sourceRef) {
+            return `${SEFARIA_BASE}/${encodeURIComponent(sourceRef)}`;
+        }
+
+        const TEXT_LIMIT = 500;
+
+        function renderText(text) {
+            if (text.length <= TEXT_LIMIT) return esc(text);
+            const truncated = esc(text.slice(0, TEXT_LIMIT));
+            return `${truncated}<span class="text-truncated-note">… לטקסט המלא ראה בספריא</span>`;
+        }
+
+        function renderSide(res) {
+            const { side, dafHeb, tractateHe, entries, tref } = res;
+            const anchorId = side === 'א' ? 'side-aleph' : 'side-bet';
+            let html = `<div class="side-section" id="${anchorId}">`;
+            html += `<div class="results-title">עמוד ${esc(side)} &nbsp;–&nbsp; <span class="daf-badge">${esc(tractateHe)} ${esc(dafHeb)}</span></div>`;
+
+            if (entries === null) {
+                html += `<div class="error-box">לא ניתן לטעון את הדף מ-Sefaria (${esc(tref)})</div>`;
+            } else if (entries.length === 0) {
+                html += `<div class="empty-msg">לא נמצאו הלכות לעמוד זה</div>`;
+            } else {
+                html += `<div class="entries">`;
+
+                entries.forEach((entry, ei) => {
+                    html += `<div class="entry">
+            <div class="entry-head">
+              <span class="entry-seg-label">פסקה ${esc(toHebrewNum(ei + 1))}</span>
+            </div>
+            <div class="entry-body">`;
+
+                    entry.refs.forEach((ref, ri) => {
+                        const cssClass = BOOK_CLASS[ref.book] || 'rambam-ref';
+                        const icon = BOOK_ICON[ref.book] || '📖';
+                        const sefUrl = sefariaUrl(ref.sourceRef);
+
+                        html += `<div class="${cssClass}">
+              <div class="ref-header">
+                <div class="ref-title">${icon} ${esc(ref.heRef)}</div>
+                <div class="ref-actions">
+                  <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a>
+                </div>
+              </div>
+              <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
+            </div>`;
+                    });
+
+                    // Commentary refs (Ben Yehoyada, Benayahu) — shown only when available
+                    if (entry.commentaryRefs && entry.commentaryRefs.length > 0) {
+                        html += `<div class="commentary-divider">פירושים</div>`;
+                        entry.commentaryRefs.forEach((ref) => {
+                            const cssClass = BOOK_CLASS[ref.book] || 'benyehoyada-ref';
+                            const icon = BOOK_ICON[ref.book] || '📜';
+                            const sefUrl = sefariaUrl(ref.sourceRef);
+
+                            html += `<div class="${cssClass}">
+                <div class="ref-header">
+                  <div class="ref-title">${icon} ${esc(ref.heRef)}</div>
+                  <div class="ref-actions">
+                    <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a>
+                  </div>
+                </div>
+                <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
+              </div>`;
+                        });
+                    }
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // ── Main search ──────────────────────────────────────────────
+        let currentSearch = 0;
+
+        async function doSearch() {
+            const tractate = document.getElementById('tractate').value;
+            const dafNum = parseInt(document.getElementById('daf-num').value, 10);
+            if (!tractate || !dafNum) return;
+
+            const searchId = ++currentSearch;
+            const dafHeb = toHebrewNum(dafNum);
+
+            document.getElementById('side-nav').style.display = 'none';
+            showLoading(`טוען ${tractate} ${dafHeb} מ-Sefaria…`);
+
+            try {
+                const [resAleph, resBet] = await Promise.all([
+                    fetchSide(tractate, dafNum, 'א'),
+                    fetchSide(tractate, dafNum, 'ב')
+                ]);
+
+                if (searchId !== currentSearch) return;
+
+                document.getElementById('results').innerHTML =
+                    renderSide(resAleph) + renderSide(resBet);
+
+                document.getElementById('side-nav').style.display = 'flex';
+
+            } catch (err) {
+                if (searchId !== currentSearch) return;
+                console.error(err);
+                showError('שגיאה: ' + err.message);
+            }
+        }
+
+        function showLoading(msg) {
+            document.getElementById('results').innerHTML =
+                `<div class="loading-msg"><div class="spinner"></div>${esc(msg)}</div>`;
+        }
+
+        function showError(msg) {
+            document.getElementById('results').innerHTML =
+                `<div class="error-box">${esc(msg)}</div>`;
+        }
+
+        // Auto-load on startup
+        doSearch();
+    </script>
+</body>
+
+</html>

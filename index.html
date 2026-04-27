@@ -508,6 +508,28 @@
       return r + ONES[n];
     }
 
+    // ── Persistence helpers (localStorage) ────────────────────────
+    const STORAGE_KEY = 'einmishpatnetmitsvah-last-selection';
+
+    function saveSelection() {
+      const tractate = document.getElementById('tractate').value;
+      const dafNum = document.getElementById('daf-num').value;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tractate, dafNum }));
+    }
+
+    function loadSelection() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const { tractate, dafNum } = JSON.parse(saved);
+          return { tractate, dafNum };
+        }
+      } catch (e) {
+        console.warn('Could not load saved selection:', e);
+      }
+      return null;
+    }
+
     // ── Populate tractate dropdown ───────────────────────────────
     const tractSel = document.getElementById('tractate');
     TRACTATES.forEach(t => {
@@ -530,10 +552,23 @@
 
     function onTractateChange() {
       buildDafDropdown(document.getElementById('tractate').value);
+      saveSelection();
       doSearch();
     }
 
-    buildDafDropdown(TRACTATES[0]);
+    // Load saved selection or defaults
+    const saved = loadSelection();
+    const defaultTractate = saved ? saved.tractate : TRACTATES[0];
+    tractSel.value = defaultTractate;
+    buildDafDropdown(defaultTractate);
+
+    const dafSel = document.getElementById('daf-num');
+    if (saved && saved.dafNum) {
+      dafSel.value = saved.dafNum;
+    }
+
+    // Trigger initial search with loaded/default values
+    doSearch();
 
     function jumpTo(id) {
       const el = document.getElementById(id);
