@@ -281,41 +281,6 @@
       border-right-color: #2d7a4a;
     }
 
-    /* ── Ben Yehoyada ref card ── */
-    .benyehoyada-ref {
-      background: #fff8ee;
-      border: 1px solid #e0a84b;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .benyehoyada-ref .halacha-box {
-      border-right-color: #c07820;
-    }
-
-    /* ── Benayahu ref card ── */
-    .benayahu-ref {
-      background: #f5f0fb;
-      border: 1px solid #b07ed4;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .benayahu-ref .halacha-box {
-      border-right-color: #7a3aad;
-    }
-
-    /* ── Commentary section divider ── */
-    .commentary-divider {
-      font-size: 0.82rem;
-      font-weight: bold;
-      color: #5a7ea8;
-      letter-spacing: 0.04em;
-      padding: 0.3rem 0.2rem 0.1rem;
-      border-top: 1px dashed #b0cce8;
-      margin-top: 0.3rem;
-    }
-
     .ref-header {
       display: flex;
       align-items: center;
@@ -468,20 +433,12 @@
         'yoreh deah', 'even haezer', 'choshen mishpat']
     };
 
-    // Commentary books to show (matched against sourceRef)
-    const COMMENTARY_PATTERNS = {
-      'Ben Yehoyada': ['ben yehoyada'],
-      'Benayahu': ['benayahu']
-    };
-
     // CSS class per book
     const BOOK_CLASS = {
       'Rambam': 'rambam-ref',
       'Tur': 'tur-ref',
       'SMaG': 'smag-ref',
-      'Shulchan Aruch': 'sa-ref',
-      'Ben Yehoyada': 'benyehoyada-ref',
-      'Benayahu': 'benayahu-ref'
+      'Shulchan Aruch': 'sa-ref'
     };
 
     // Icon per book
@@ -489,9 +446,7 @@
       'Rambam': '📘',
       'Tur': '📙',
       'SMaG': '📗',
-      'Shulchan Aruch': '📕',
-      'Ben Yehoyada': '📜',
-      'Benayahu': '📋'
+      'Shulchan Aruch': '📕'
     };
 
     // ── Hebrew numerals ──────────────────────────────────────────
@@ -632,56 +587,6 @@
       return r.json();
     }
 
-    // Fetch Commentary links for a daf side (Ben Yehoyada, Benayahu)
-    async function fetchCommentaryLinks(tref) {
-      const url = `${SEFARIA_BASE}/api/links/${encodeURIComponent(tref)}?category=Commentary`;
-      const r = await fetch(url);
-      if (!r.ok) return [];
-      return r.json();
-    }
-
-    // Build commentary mapping: Map<segNum, Map<bookName, Array<{heRef, text, sourceRef}>>>
-    function buildCommentaryMapping(links, targetDafNorm) {
-      const mapping = new Map();
-
-      for (const link of links) {
-        const anchorRef = link.anchorRef || '';
-        const sourceRef = link.sourceRef || '';
-        const sourceHeRef = link.sourceHeRef || sourceRef;
-
-        if (!anchorRef.toLowerCase().includes(targetDafNorm)) continue;
-
-        const seg = extractSegment(anchorRef);
-        if (seg === null) continue;
-
-        // Match against commentary patterns
-        const sourceRefL = sourceRef.toLowerCase();
-        let matchedBook = null;
-        for (const [book, patterns] of Object.entries(COMMENTARY_PATTERNS)) {
-          for (const p of patterns) {
-            if (sourceRefL.includes(p)) { matchedBook = book; break; }
-          }
-          if (matchedBook) break;
-        }
-        if (!matchedBook) continue;
-
-        let text = '';
-        const he = link.he;
-        if (Array.isArray(he)) {
-          text = cleanHebrew(he.join(' '));
-        } else if (typeof he === 'string') {
-          text = cleanHebrew(he);
-        }
-
-        if (!mapping.has(seg)) mapping.set(seg, new Map());
-        const segMap = mapping.get(seg);
-        if (!segMap.has(matchedBook)) segMap.set(matchedBook, []);
-        segMap.get(matchedBook).push({ heRef: sourceHeRef, text, sourceRef });
-      }
-
-      return mapping;
-    }
-
     // Fetch data for one side (א or ב) and build entries
     async function fetchSide(tractateHe, dafNum, side) {
       const tractateEn = TRACTATE_EN[tractateHe] || tractateHe;
@@ -694,49 +599,33 @@
       const targetDafNorm = `${tractateEn.toLowerCase()} ${dafNum}${sideEn}`;
 
       try {
-        const [textSegments, links, commentaryLinks] = await Promise.all([
+        const [textSegments, links] = await Promise.all([
           fetchDafText(tref),
-          fetchLinks(tref),
-          fetchCommentaryLinks(tref)
+          fetchLinks(tref)
         ]);
 
         const mapping = buildMapping(links, targetDafNorm);
-        const commentaryMapping = buildCommentaryMapping(commentaryLinks, targetDafNorm);
 
-        // Build entries: one entry per segment that has Halakhah OR commentary links
+        // Build entries: one entry per segment that has Halakhah links
         const entries = [];
         textSegments.forEach((segText, idx) => {
           const segNum = idx + 1;
+          if (!mapping.has(segNum)) return;
 
+          const bookMap = mapping.get(segNum);
           const refs = [];
-          if (mapping.has(segNum)) {
-            const bookMap = mapping.get(segNum);
-            // Preferred display order
-            for (const book of ['Rambam', 'Tur', 'SMaG', 'Shulchan Aruch']) {
-              if (bookMap.has(book)) {
-                for (const item of bookMap.get(book)) {
-                  refs.push({ book, heRef: item.heRef, text: item.text, sourceRef: item.sourceRef });
-                }
+
+          // Preferred display order
+          for (const book of ['Rambam', 'Tur', 'SMaG', 'Shulchan Aruch']) {
+            if (bookMap.has(book)) {
+              for (const item of bookMap.get(book)) {
+                refs.push({ book, heRef: item.heRef, text: item.text, sourceRef: item.sourceRef });
               }
             }
           }
 
-          // Commentary refs for this segment (Ben Yehoyada, Benayahu)
-          const commentaryRefs = [];
-          if (commentaryMapping.has(segNum)) {
-            const cMap = commentaryMapping.get(segNum);
-            for (const book of ['Ben Yehoyada', 'Benayahu']) {
-              if (cMap.has(book)) {
-                for (const item of cMap.get(book)) {
-                  commentaryRefs.push({ book, heRef: item.heRef, text: item.text, sourceRef: item.sourceRef });
-                }
-              }
-            }
-          }
-
-          // Include segment if it has either Halakhah refs OR commentary refs
-          if (refs.length > 0 || commentaryRefs.length > 0) {
-            entries.push({ segNum, segText: cleanHebrew(segText), refs, commentaryRefs });
+          if (refs.length > 0) {
+            entries.push({ segNum, segText: cleanHebrew(segText), refs });
           }
         });
 
@@ -802,26 +691,6 @@
               <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
             </div>`;
           });
-
-          // Commentary refs (Ben Yehoyada, Benayahu) — shown only when available
-          if (entry.commentaryRefs && entry.commentaryRefs.length > 0) {
-            html += `<div class="commentary-divider">פירושים</div>`;
-            entry.commentaryRefs.forEach((ref) => {
-              const cssClass = BOOK_CLASS[ref.book] || 'benyehoyada-ref';
-              const icon = BOOK_ICON[ref.book] || '📜';
-              const sefUrl = sefariaUrl(ref.sourceRef);
-
-              html += `<div class="${cssClass}">
-                <div class="ref-header">
-                  <div class="ref-title">${icon} ${esc(ref.heRef)}</div>
-                  <div class="ref-actions">
-                    <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a>
-                  </div>
-                </div>
-                <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
-              </div>`;
-            });
-          }
 
           html += `</div></div>`;
         });
