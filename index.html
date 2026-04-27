@@ -143,7 +143,18 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .text-truncated-note {
+      display: block;
+      margin-top: 0.5rem;
+      font-style: italic;
+      color: #1a3a6b;
+      font-size: 0.88rem;
+      opacity: 0.8;
     }
 
     .error-box {
@@ -325,9 +336,18 @@
     }
 
     @media (max-width: 560px) {
-      header h1 { font-size: 1.6rem; }
-      .selector-row { gap: 0.7rem; }
-      .ref-header { flex-direction: column; align-items: flex-start; }
+      header h1 {
+        font-size: 1.6rem;
+      }
+
+      .selector-row {
+        gap: 0.7rem;
+      }
+
+      .ref-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -406,35 +426,35 @@
 
     // Book identification patterns (mirrors Python BOOK_PATTERNS)
     const BOOK_PATTERNS = {
-      'Rambam':        ['mishneh torah', 'rambam'],
-      'Tur':           ['tur', 'arbaah turim'],
-      'SMaG':          ['sefer mitzvot gadol', 'smag'],
-      'Shulchan Aruch':['shulchan aruch', 'shulchan arukh', 'orach chayim',
-                        'yoreh deah', 'even haezer', 'choshen mishpat']
+      'Rambam': ['mishneh torah', 'rambam'],
+      'Tur': ['tur', 'arbaah turim'],
+      'SMaG': ['sefer mitzvot gadol', 'smag'],
+      'Shulchan Aruch': ['shulchan aruch', 'shulchan arukh', 'orach chayim',
+        'yoreh deah', 'even haezer', 'choshen mishpat']
     };
 
     // CSS class per book
     const BOOK_CLASS = {
-      'Rambam':         'rambam-ref',
-      'Tur':            'tur-ref',
-      'SMaG':           'smag-ref',
+      'Rambam': 'rambam-ref',
+      'Tur': 'tur-ref',
+      'SMaG': 'smag-ref',
       'Shulchan Aruch': 'sa-ref'
     };
 
     // Icon per book
     const BOOK_ICON = {
-      'Rambam':         '📘',
-      'Tur':            '📙',
-      'SMaG':           '📗',
+      'Rambam': '📘',
+      'Tur': '📙',
+      'SMaG': '📗',
       'Shulchan Aruch': '📕'
     };
 
     // ── Hebrew numerals ──────────────────────────────────────────
     function toHebrewNum(n) {
       if (n <= 0) return '';
-      const ONES    = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
-      const TENS    = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
-      const HUNDREDS= ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
+      const ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+      const TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+      const HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
       let r = '';
       if (n >= 100) { r += HUNDREDS[Math.floor(n / 100)]; n %= 100; }
       if (n === 15) return r + 'טו';
@@ -514,8 +534,8 @@
       for (const link of links) {
         if (link.category !== 'Halakhah') continue;
 
-        const anchorRef   = link.anchorRef   || '';
-        const sourceRef   = link.sourceRef   || '';
+        const anchorRef = link.anchorRef || '';
+        const sourceRef = link.sourceRef || '';
         const sourceHeRef = link.sourceHeRef || sourceRef;
 
         // Only keep links that anchor to our target daf
@@ -628,6 +648,14 @@
       return `${SEFARIA_BASE}/${encodeURIComponent(sourceRef)}`;
     }
 
+    const TEXT_LIMIT = 500;
+
+    function renderText(text) {
+      if (text.length <= TEXT_LIMIT) return esc(text);
+      const truncated = esc(text.slice(0, TEXT_LIMIT));
+      return `${truncated}<span class="text-truncated-note">… לטקסט המלא ראה בספריא</span>`;
+    }
+
     function renderSide(res) {
       const { side, dafHeb, tractateHe, entries, tref } = res;
       const anchorId = side === 'א' ? 'side-aleph' : 'side-bet';
@@ -660,7 +688,7 @@
                   <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a>
                 </div>
               </div>
-              <div class="halacha-box">${ref.text ? esc(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
+              <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
             </div>`;
           });
 
