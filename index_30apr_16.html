@@ -370,73 +370,6 @@
       font-style: italic;
     }
 
-    /* ── Tab bar ── */
-    .tab-bar {
-      display: flex;
-      gap: 0;
-      margin-bottom: 0;
-      border-bottom: 2.5px solid #4a90d9;
-      margin-top: 1.2rem;
-    }
-
-    .tab-btn {
-      padding: 0.6rem 1.3rem;
-      background: #deeaf8;
-      color: #1a3a6b;
-      border: 1.5px solid #7ab3e0;
-      border-bottom: none;
-      border-radius: 10px 10px 0 0;
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-      margin-left: 4px;
-      position: relative;
-      bottom: -2px;
-    }
-
-    .tab-btn:first-child {
-      margin-left: 0;
-    }
-
-    .tab-btn:hover:not(.active) {
-      background: #c8dff7;
-    }
-
-    .tab-btn.active {
-      background: #f5f9ff;
-      color: #0d2145;
-      border-color: #4a90d9;
-      border-bottom: 2.5px solid #f5f9ff;
-      z-index: 1;
-    }
-
-    .tab-btn.disabled-tab {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .tab-panel {
-      display: none;
-    }
-
-    .tab-panel.active {
-      display: block;
-    }
-
-    .placeholder-panel {
-      text-align: center;
-      padding: 3.5rem 1rem;
-      color: #7a9fc0;
-      font-size: 1.05rem;
-    }
-
-    .placeholder-panel .placeholder-icon {
-      font-size: 2.5rem;
-      margin-bottom: 0.7rem;
-    }
-
     @media (max-width: 560px) {
       header h1 {
         font-size: 1.6rem;
@@ -470,7 +403,7 @@
         </div>
         <div class="field">
           <label for="daf-num">דף</label>
-          <select id="daf-num" onchange="saveSelection(); doSearch()"></select>
+          <select id="daf-num" onchange="doSearch()"></select>
         </div>
         <div class="side-nav" id="side-nav" style="display:none">
           <button class="side-btn" onclick="jumpTo('side-aleph')">עמוד א</button>
@@ -479,28 +412,7 @@
       </div>
     </div>
 
-    <!-- Tab bar -->
-    <div class="tab-bar" id="tab-bar">
-      <button class="tab-btn active" id="tab-halachot" onclick="switchTab('halachot')">הלכות</button>
-      <button class="tab-btn" id="tab-mefarshim" onclick="switchTab('mefarshim')">מפרשים</button>
-      <button class="tab-btn disabled-tab" id="tab-klalei" title="בקרוב">כללי הגמרא</button>
-    </div>
-
-    <!-- Tab panels -->
-    <div id="panel-halachot" class="tab-panel active">
-      <div id="results-halachot"></div>
-    </div>
-
-    <div id="panel-mefarshim" class="tab-panel">
-      <div id="results-mefarshim"></div>
-    </div>
-
-    <div id="panel-klalei" class="tab-panel">
-      <div class="placeholder-panel">
-        <div class="placeholder-icon">📚</div>
-        <div>כללי הגמרא – בקרוב</div>
-      </div>
-    </div>
+    <div id="results"></div>
   </main>
 
   <script>
@@ -871,19 +783,6 @@
       }
     }
 
-    // ── Tab switching ────────────────────────────────────────────
-    let activeTab = 'halachot';
-
-    function switchTab(name) {
-      if (name === 'klalei') return; // placeholder – no-op
-      activeTab = name;
-      ['halachot', 'mefarshim', 'klalei'].forEach(t => {
-        document.getElementById('tab-' + t).classList.toggle('active', t === name);
-        const panel = document.getElementById('panel-' + t);
-        if (panel) panel.classList.toggle('active', t === name);
-      });
-    }
-
     // ── Render ──────────────────────────────────────────────────
     function esc(s) {
       return String(s)
@@ -896,17 +795,14 @@
     }
 
     const TEXT_LIMIT = 500;
-    const NO_LIMIT_BOOKS = new Set(['Ben Yehoyada', 'Benayahu', 'Rambam', 'Shulchan Aruch']);
 
-    // Returns { html, truncated }
-    function renderText(text, book) {
-      if (NO_LIMIT_BOOKS.has(book)) return { html: esc(text), truncated: false };
-      if (text.length <= TEXT_LIMIT) return { html: esc(text), truncated: false };
-      return { html: esc(text.slice(0, TEXT_LIMIT)), truncated: true };
+    function renderText(text) {
+      if (text.length <= TEXT_LIMIT) return esc(text);
+      const truncated = esc(text.slice(0, TEXT_LIMIT));
+      return `${truncated}<span class="text-truncated-note">… לטקסט המלא ראה בספריא</span>`;
     }
 
-    // Render a single side's HALACHOT content
-    function renderSideHalachot(res) {
+    function renderSide(res) {
       const { side, dafHeb, tractateHe, entries, tref } = res;
       const anchorId = side === 'א' ? 'side-aleph' : 'side-bet';
       let html = `<div class="side-section" id="${anchorId}">`;
@@ -914,107 +810,58 @@
 
       if (entries === null) {
         html += `<div class="error-box">לא ניתן לטעון את הדף מ-Sefaria (${esc(tref)})</div>`;
+      } else if (entries.length === 0) {
+        html += `<div class="empty-msg">לא נמצאו הלכות לעמוד זה</div>`;
       } else {
-        // Filter to entries that have halakhah refs
-        const halachotEntries = entries.filter(e => e.refs.length > 0);
-        if (halachotEntries.length === 0) {
-          html += `<div class="empty-msg">לא נמצאו הלכות לעמוד זה</div>`;
-        } else {
-          html += `<div class="entries">`;
-          halachotEntries.forEach((entry, ei) => {
-            html += `<div class="entry">
-              <div class="entry-head">
-                <span class="entry-seg-label">פסקה ${esc(toHebrewNum(ei + 1))}</span>
-              </div>
-              <div class="entry-body">`;
+        html += `<div class="entries">`;
 
-            entry.refs.forEach((ref) => {
-              const cssClass = BOOK_CLASS[ref.book] || 'rambam-ref';
-              const icon = BOOK_ICON[ref.book] || '📖';
-              const sefUrl = sefariaUrl(ref.sourceRef);
-              let bodyHtml, isTruncated;
-              if (!ref.text) {
-                bodyHtml = '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>';
-                isTruncated = false;
-              } else {
-                const result = renderText(ref.text, ref.book);
-                bodyHtml = result.html;
-                isTruncated = result.truncated;
-                if (isTruncated) {
-                  bodyHtml += `<span class="text-truncated-note">… <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">לטקסט המלא ראה בספריא ↗</a></span>`;
-                }
-              }
-              html += `<div class="${cssClass}">
-                <div class="ref-header">
-                  <div class="ref-title">${icon} ${esc(ref.heRef)}</div>
-                  ${!isTruncated && !NO_LIMIT_BOOKS.has(ref.book) ? `<div class="ref-actions"><a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a></div>` : ''}
+        entries.forEach((entry, ei) => {
+          html += `<div class="entry">
+            <div class="entry-head">
+              <span class="entry-seg-label">פסקה ${esc(toHebrewNum(ei + 1))}</span>
+            </div>
+            <div class="entry-body">`;
+
+          entry.refs.forEach((ref, ri) => {
+            const cssClass = BOOK_CLASS[ref.book] || 'rambam-ref';
+            const icon = BOOK_ICON[ref.book] || '📖';
+            const sefUrl = sefariaUrl(ref.sourceRef);
+
+            html += `<div class="${cssClass}">
+              <div class="ref-header">
+                <div class="ref-title">${icon} ${esc(ref.heRef)}</div>
+                <div class="ref-actions">
+                  <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a>
                 </div>
-                <div class="halacha-box">${bodyHtml}</div>
-              </div>`;
-            });
-
-            html += `</div></div>`;
-          });
-          html += `</div>`;
-        }
-      }
-
-      html += `</div>`;
-      return html;
-    }
-
-    // Render a single side's MEFARSHIM (commentary) content
-    function renderSideMefarshim(res) {
-      const { side, dafHeb, tractateHe, entries, tref } = res;
-      const anchorId = (side === 'א' ? 'mef-side-aleph' : 'mef-side-bet');
-      let html = `<div class="side-section" id="${anchorId}">`;
-      html += `<div class="results-title">עמוד ${esc(side)} &nbsp;–&nbsp; <span class="daf-badge">${esc(tractateHe)} ${esc(dafHeb)}</span></div>`;
-
-      if (entries === null) {
-        html += `<div class="error-box">לא ניתן לטעון את הדף מ-Sefaria (${esc(tref)})</div>`;
-      } else {
-        // Filter to entries that have commentary refs
-        const mefEntries = entries.filter(e => e.commentaryRefs && e.commentaryRefs.length > 0);
-        if (mefEntries.length === 0) {
-          html += `<div class="empty-msg">לא נמצאו מפרשים לעמוד זה</div>`;
-        } else {
-          html += `<div class="entries">`;
-          mefEntries.forEach((entry, ei) => {
-            html += `<div class="entry">
-              <div class="entry-head">
-                <span class="entry-seg-label">פסקה ${esc(toHebrewNum(ei + 1))}</span>
               </div>
-              <div class="entry-body">`;
+              <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
+            </div>`;
+          });
 
+          // Commentary refs (Ben Yehoyada, Benayahu) — shown only when available
+          if (entry.commentaryRefs && entry.commentaryRefs.length > 0) {
+            html += `<div class="commentary-divider">פירושים</div>`;
             entry.commentaryRefs.forEach((ref) => {
               const cssClass = BOOK_CLASS[ref.book] || 'benyehoyada-ref';
               const icon = BOOK_ICON[ref.book] || '📜';
               const sefUrl = sefariaUrl(ref.sourceRef);
-              let bodyHtml, isTruncated;
-              if (!ref.text) {
-                bodyHtml = '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>';
-                isTruncated = false;
-              } else {
-                const result = renderText(ref.text, ref.book);
-                bodyHtml = result.html;
-                isTruncated = result.truncated;
-                if (isTruncated) {
-                  bodyHtml += `<span class="text-truncated-note">… <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">לטקסט המלא ראה בספריא ↗</a></span>`;
-                }
-              }
+
               html += `<div class="${cssClass}">
                 <div class="ref-header">
                   <div class="ref-title">${icon} ${esc(ref.heRef)}</div>
-                  ${!isTruncated && !NO_LIMIT_BOOKS.has(ref.book) ? `<div class="ref-actions"><a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a></div>` : ''}
+                  <div class="ref-actions">
+                    <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">Sefaria ↗</a>
+                  </div>
                 </div>
-                <div class="halacha-box">${bodyHtml}</div>
+                <div class="halacha-box">${ref.text ? renderText(ref.text) : '<span style="color:#7a9fc0;font-style:italic">לא נמצא טקסט</span>'}</div>
               </div>`;
             });
+          }
 
-            html += `</div></div>`;
-          });
-          html += `</div>`;
-        }
+          html += `</div></div>`;
+        });
+
+        html += `</div>`;
       }
 
       html += `</div>`;
@@ -1043,13 +890,8 @@
 
         if (searchId !== currentSearch) return;
 
-        // Populate הלכות tab
-        document.getElementById('results-halachot').innerHTML =
-          renderSideHalachot(resAleph) + renderSideHalachot(resBet);
-
-        // Populate מפרשים tab
-        document.getElementById('results-mefarshim').innerHTML =
-          renderSideMefarshim(resAleph) + renderSideMefarshim(resBet);
+        document.getElementById('results').innerHTML =
+          renderSide(resAleph) + renderSide(resBet);
 
         document.getElementById('side-nav').style.display = 'flex';
 
@@ -1061,15 +903,13 @@
     }
 
     function showLoading(msg) {
-      document.getElementById('results-halachot').innerHTML =
+      document.getElementById('results').innerHTML =
         `<div class="loading-msg"><div class="spinner"></div>${esc(msg)}</div>`;
-      document.getElementById('results-mefarshim').innerHTML = '';
     }
 
     function showError(msg) {
-      document.getElementById('results-halachot').innerHTML =
+      document.getElementById('results').innerHTML =
         `<div class="error-box">${esc(msg)}</div>`;
-      document.getElementById('results-mefarshim').innerHTML = '';
     }
 
     // Auto-load on startup
