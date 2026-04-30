@@ -1234,8 +1234,7 @@
       if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
 
       const items = q
-        ? KLALEI_DATA.filter(r =>
-            r.klal.includes(q) || r.makor.includes(q) || r.hesber.includes(q))
+        ? KLALEI_DATA.filter(r => r.klal.includes(q))
         : KLALEI_DATA;
 
       // Update count
