@@ -34,7 +34,7 @@
     }
 
     .header-logo {
-      height: 80px;
+      height: 70px;
       width: auto;
       flex-shrink: 0;
       order: 1;
@@ -58,8 +58,8 @@
     }
 
     .header-spacer {
-      height: 80px;
-      width: 80px;
+      height: 10px;
+      width: 10px;
       flex-shrink: 0;
       order: 3;
     }
@@ -67,7 +67,7 @@
     main {
       max-width: 860px;
       margin: 0 auto;
-      padding: 1.8rem 1.2rem;
+      padding: 1.2rem 1.2rem;
     }
 
     /* ── Selector card ── */
@@ -397,8 +397,8 @@
     /* ── Tab bar ── */
     .tab-bar {
       display: flex;
-      gap: 0;
-      margin-bottom: 0;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
       border-bottom: 2.5px solid #4a90d9;
       margin-top: 1.2rem;
     }
@@ -415,7 +415,6 @@
       font-weight: bold;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
-      margin-left: 4px;
       position: relative;
       bottom: -2px;
     }
@@ -594,7 +593,7 @@
       alt="לוגו מכלל יופי" class="header-logo">
     <div class="header-text">
       <h1>עזרי לימוד גמרא</h1>
-      <p>בחר דף גמרא </p>
+      <p> </p>
     </div>
     <div class="header-spacer"></div>
   </header>
@@ -636,11 +635,10 @@
     <div id="panel-klalei" class="tab-panel">
       <div class="klalei-search-row">
         <div class="klalei-search-input-wrapper">
-          <input class="klalei-search-input" id="klalei-search"
-            placeholder="חיפוש בכללי הגמרא…"
-            oninput="renderKlalei(this.value)"
-            autocomplete="off">
-          <button class="klalei-clear-btn" id="klalei-clear" onclick="clearKlaleiSearch()" title="נקה חיפוש" style="display:none">✕</button>
+          <input class="klalei-search-input" id="klalei-search" placeholder="חיפוש בכללי הגמרא…"
+            oninput="renderKlalei(this.value)" autocomplete="off">
+          <button class="klalei-clear-btn" id="klalei-clear" onclick="clearKlaleiSearch()" title="נקה חיפוש"
+            style="display:none">✕</button>
         </div>
         <span class="klalei-count" id="klalei-count"></span>
       </div>
