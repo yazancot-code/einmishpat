@@ -1,4 +1,4 @@
-const CACHE_NAME = 'einmishpat-v2';
+const CACHE_NAME = 'einmishpat-v3';
 const urlsToCache = [
     './',
     './index.html',
