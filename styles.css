@@ -173,6 +173,23 @@ select:focus {
   opacity: 0.8;
 }
 
+.toggle-text-btn {
+  background: none;
+  border: 1px solid #4a90d9;
+  border-radius: 4px;
+  color: #1a3a6b;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.88rem;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.toggle-text-btn:hover {
+  background: #c0daef;
+}
+
 .error-box {
   background: #fff0f0;
   border: 1.5px solid #e09090;

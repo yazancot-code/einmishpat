@@ -304,6 +304,12 @@ function esc(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function sefariaUrl(sourceRef) {
   return `${SEFARIA_BASE}/${encodeURIComponent(sourceRef)}`;
 }
@@ -352,7 +358,9 @@ function renderSideHalachot(res) {
             bodyHtml = result.html;
             isTruncated = result.truncated;
             if (isTruncated) {
-              bodyHtml += `<span class="text-truncated-note">… <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">לטקסט המלא ראה בספריא ↗</a></span>`;
+              const truncatedRaw = ref.text.slice(0, TEXT_LIMIT);
+              bodyHtml = `<span class="text-toggle" data-full="${escAttr(ref.text)}" data-trunc="${escAttr(truncatedRaw)}">${bodyHtml}</span>`;
+              bodyHtml += `<span class="text-truncated-note">… <button class="toggle-text-btn" type="button" data-expanded="false">להרחיב</button></span>`;
             }
           }
           html += `<div class="${cssClass}">
@@ -409,7 +417,9 @@ function renderSideMefarshim(res) {
             bodyHtml = result.html;
             isTruncated = result.truncated;
             if (isTruncated) {
-              bodyHtml += `<span class="text-truncated-note">… <a class="link-ws" href="${esc(sefUrl)}" target="_blank" rel="noopener">לטקסט המלא ראה בספריא ↗</a></span>`;
+              const truncatedRaw = ref.text.slice(0, TEXT_LIMIT);
+              bodyHtml = `<span class="text-toggle" data-full="${escAttr(ref.text)}" data-trunc="${escAttr(truncatedRaw)}">${bodyHtml}</span>`;
+              bodyHtml += `<span class="text-truncated-note">… <button class="toggle-text-btn" type="button" data-expanded="false">להרחיב</button></span>`;
             }
           }
           html += `<div class="${cssClass}">
@@ -536,4 +546,24 @@ switchTab = function (name) {
     renderKlalei(document.getElementById('klalei-search')?.value || '');
   }
 };
+
+// ── Toggle truncated text expand/collapse ────────────────────
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.toggle-text-btn');
+  if (!btn) return;
+  const container = btn.closest('.halacha-box');
+  if (!container) return;
+  const toggleSpan = container.querySelector('.text-toggle');
+  if (!toggleSpan) return;
+  const expanded = btn.dataset.expanded === 'true';
+  if (expanded) {
+    toggleSpan.innerHTML = esc(toggleSpan.dataset.trunc);
+    btn.textContent = 'להרחיב';
+    btn.dataset.expanded = 'false';
+  } else {
+    toggleSpan.innerHTML = esc(toggleSpan.dataset.full);
+    btn.textContent = 'לצמצם';
+    btn.dataset.expanded = 'true';
+  }
+});
 
