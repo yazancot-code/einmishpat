@@ -136,6 +136,76 @@ select:focus {
   transform: translateY(-1px);
 }
 
+/* ── Settings btn & panel ── */
+.settings-btn {
+  background: none;
+  border: 1.5px solid #7ab3e0;
+  border-radius: 7px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  line-height: 1;
+  transition: background 0.15s, transform 0.1s;
+  align-self: flex-end;
+  order: 4;
+}
+
+.settings-btn:hover,
+.settings-btn.active {
+  background: #c0daef;
+  transform: translateY(-1px);
+}
+
+.settings-panel {
+  background: #f5f9ff;
+  border: 1.5px solid #4a90d9;
+  border-radius: 11px;
+  padding: 1rem 1.2rem;
+  margin-top: 0.6rem;
+  box-shadow: 0 4px 18px rgba(20, 70, 140, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-group-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #1a3a6b;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1.5px solid #a8ccee;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  color: #0d1f3c;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+
+.settings-item:hover {
+  background: #deeaf8;
+}
+
+.settings-item input[type=checkbox] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: #1a3a6b;
+}
+
 /* ── States ── */
 .loading-msg {
   text-align: center;

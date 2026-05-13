@@ -1,3 +1,85 @@
+// ── Settings (persistent book selection) ───────────────────────
+const SETTINGS_KEY = 'einmishpatnetmitsvah-settings';
+
+const ALL_BOOKS = ['Rambam', 'Tur', 'SMaG', 'Shulchan Aruch', 'Ben Yehoyada', 'Benayahu'];
+
+function defaultSettings() {
+  const books = {};
+  ALL_BOOKS.forEach(b => books[b] = true);
+  return { books };
+}
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with defaults so new books default to enabled
+      const merged = defaultSettings();
+      if (parsed.books) {
+        ALL_BOOKS.forEach(b => {
+          if (typeof parsed.books[b] === 'boolean') merged.books[b] = parsed.books[b];
+        });
+      }
+      return merged;
+    }
+  } catch (e) { console.warn('Could not load settings:', e); }
+  return defaultSettings();
+}
+
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+let _settings = loadSettings();
+
+function isBookEnabled(book) {
+  return _settings.books[book] !== false;
+}
+
+function toggleBook(book) {
+  _settings.books[book] = !_settings.books[book];
+  saveSettings(_settings);
+  // Update checkbox state
+  const label = document.querySelector(`.settings-item[data-book="${book}"]`);
+  if (label) {
+    const cb = label.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = _settings.books[book];
+  }
+  renderFromLastResults();
+}
+
+function toggleSettings() {
+  const panel = document.getElementById('settings-panel');
+  const btn = document.getElementById('settings-btn');
+  if (!panel) return;
+  const shown = panel.style.display !== 'none';
+  panel.style.display = shown ? 'none' : 'block';
+  btn.classList.toggle('active', !shown);
+}
+
+// Close settings panel when clicking outside
+document.addEventListener('click', function (e) {
+  const panel = document.getElementById('settings-panel');
+  const btn = document.getElementById('settings-btn');
+  if (!panel || panel.style.display === 'none') return;
+  if (!panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+    btn.classList.remove('active');
+  }
+});
+
+// Sync the settings checkboxes on page load
+function initSettingsUI() {
+  ALL_BOOKS.forEach(book => {
+    const label = document.querySelector(`.settings-item[data-book="${book}"]`);
+    if (label) {
+      const cb = label.querySelector('input[type=checkbox]');
+      if (cb) cb.checked = _settings.books[book] !== false;
+    }
+  });
+}
+
 // ── Hebrew numerals ──────────────────────────────────────────
 function toHebrewNum(n) {
   if (n <= 0) return '';
@@ -80,8 +162,12 @@ function initFirstRender() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initFirstRender, { once: true });
+  document.addEventListener('DOMContentLoaded', () => {
+    initSettingsUI();
+    initFirstRender();
+  }, { once: true });
 } else {
+  initSettingsUI();
   initFirstRender();
 }
 
@@ -333,7 +419,10 @@ function renderSideHalachot(res) {
   if (entries === null) {
     html += `<div class="error-box">לא ניתן לטעון את הדף מ-Sefaria (${esc(tref)})</div>`;
   } else {
-    const halachotEntries = entries.filter(e => e.refs.length > 0);
+    const halachotEntries = entries.filter(e => {
+      const enabledRefs = e.refs.filter(r => isBookEnabled(r.book));
+      return enabledRefs.length > 0;
+    });
     if (halachotEntries.length === 0) {
       html += `<div class="empty-msg">לא נמצאו הלכות לעמוד זה</div>`;
     } else {
@@ -345,7 +434,7 @@ function renderSideHalachot(res) {
           </div>
           <div class="entry-body">`;
 
-        entry.refs.forEach((ref) => {
+        entry.refs.filter(r => isBookEnabled(r.book)).forEach((ref) => {
           const cssClass = BOOK_CLASS[ref.book] || 'rambam-ref';
           const icon = BOOK_ICON[ref.book] || '📖';
           const sefUrl = sefariaUrl(ref.sourceRef);
@@ -392,7 +481,10 @@ function renderSideMefarshim(res) {
   if (entries === null) {
     html += `<div class="error-box">לא ניתן לטעון את הדף מ-Sefaria (${esc(tref)})</div>`;
   } else {
-    const mefEntries = entries.filter(e => e.commentaryRefs && e.commentaryRefs.length > 0);
+    const mefEntries = entries.filter(e => {
+      const enabledRefs = (e.commentaryRefs || []).filter(r => isBookEnabled(r.book));
+      return enabledRefs.length > 0;
+    });
     if (mefEntries.length === 0) {
       html += `<div class="empty-msg">לא נמצאו מפרשים לעמוד זה</div>`;
     } else {
@@ -404,7 +496,7 @@ function renderSideMefarshim(res) {
           </div>
           <div class="entry-body">`;
 
-        entry.commentaryRefs.forEach((ref) => {
+        entry.commentaryRefs.filter(r => isBookEnabled(r.book)).forEach((ref) => {
           const cssClass = BOOK_CLASS[ref.book] || 'benyehoyada-ref';
           const icon = BOOK_ICON[ref.book] || '📜';
           const sefUrl = sefariaUrl(ref.sourceRef);
@@ -443,6 +535,16 @@ function renderSideMefarshim(res) {
 
 // ── Main search ──────────────────────────────────────────────
 let currentSearch = 0;
+let lastResults = null;
+
+function renderFromLastResults() {
+  if (!lastResults) return;
+  const { resAleph, resBet } = lastResults;
+  document.getElementById('results-halachot').innerHTML =
+    renderSideHalachot(resAleph) + renderSideHalachot(resBet);
+  document.getElementById('results-mefarshim').innerHTML =
+    renderSideMefarshim(resAleph) + renderSideMefarshim(resBet);
+}
 
 async function doSearch() {
   const tractate = document.getElementById('tractate').value;
@@ -470,6 +572,8 @@ async function doSearch() {
       renderSideMefarshim(resAleph) + renderSideMefarshim(resBet);
 
     document.getElementById('side-nav').style.display = 'flex';
+
+    lastResults = { resAleph, resBet };
 
   } catch (err) {
     if (searchId !== currentSearch) return;
