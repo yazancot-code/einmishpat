@@ -1,4 +1,4 @@
-const CACHE_NAME = 'einmishpat-v1';
+const CACHE_NAME = 'einmishpat-v2';
 const urlsToCache = [
     './',
     './index.html',
@@ -8,9 +8,19 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
+    );
+});
+
+self.addEventListener('activate', event => {
+    self.clients.claim();
+    event.waitUntil(
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+        )
     );
 });
 
