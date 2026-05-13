@@ -1,10 +1,10 @@
 const CACHE_NAME = 'einmishpat-v1';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/app.js',
-    '/data.js'  // Add your files
+    './',
+    './index.html',
+    './styles.css',
+    './app.js',
+    './data.js'  // Add your files
 ];
 
 self.addEventListener('install', event => {

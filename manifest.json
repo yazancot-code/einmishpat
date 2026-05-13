@@ -2,8 +2,7 @@
     "name": "Gemara",
     "short_name": "עזרי גמרא",
     "description": "Gemara learning app",
-    "start_url": "/",
-    "display": "standalone",
+    "start_url": "/einmishpat/""display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#000000",
     "icons": [
