@@ -24,11 +24,16 @@ const DAF_MAX = {
   'מעילה': 22, 'תמיד': 33, 'נדה': 73
 };
 
+// Tractates where daf text starts after daf 2 on Sefaria
+const DAF_FIRST = {
+  'תמיד': 25
+};
+
 const TRACTATE_EN = {
   'ברכות': 'Berakhot',
   'שבת': 'Shabbat', 'עירובין': 'Eruvin', 'פסחים': 'Pesachim',
   'יומא': 'Yoma', 'סוכה': 'Sukkah', 'ביצה': 'Beitzah',
-  'ראש השנה': 'Rosh Hashanah', 'תענית': "Ta'anit", 'מגילה': 'Megillah',
+  'ראש השנה': 'Rosh Hashanah', 'תענית': 'Taanit', 'מגילה': 'Megillah',
   'מועד קטן': 'Moed Katan', 'חגיגה': 'Chagigah',
   'יבמות': 'Yevamot', 'כתובות': 'Ketubot', 'נדרים': 'Nedarim',
   'נזיר': 'Nazir', 'סוטה': 'Sotah', 'גיטין': 'Gittin', 'קידושין': 'Kiddushin',

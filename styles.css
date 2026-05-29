@@ -118,17 +118,18 @@ select:focus {
 }
 
 .side-btn {
-  padding: 0.45rem 0.75rem;
+  padding: 0.3rem 0.75rem;
   background: linear-gradient(135deg, #1a3a6b 0%, #2e5fa3 100%);
   color: #c8dff7;
   border: none;
   border-radius: 7px;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
   transition: filter 0.15s, transform 0.1s;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .side-btn:hover {
@@ -140,10 +141,10 @@ select:focus {
 .settings-btn {
   background: none;
   border: 1.5px solid #7ab3e0;
-  border-radius: 7px;
-  font-size: 1.3rem;
+  border-radius: 8px;
+  font-size: 1.6rem;
   cursor: pointer;
-  padding: 0.35rem 0.5rem;
+  padding: 0.25rem 0.45rem;
   line-height: 1;
   transition: background 0.15s, transform 0.1s;
   align-self: flex-end;
@@ -152,6 +153,25 @@ select:focus {
 
 .settings-btn:hover,
 .settings-btn.active {
+  background: #c0daef;
+  transform: translateY(-1px);
+}
+
+/* ── PDF button ── */
+.pdf-btn {
+  background: none;
+  border: 1.5px solid #7ab3e0;
+  border-radius: 8px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.25rem 0.45rem;
+  line-height: 1;
+  transition: background 0.15s, transform 0.1s;
+  align-self: flex-end;
+  order: 4;
+}
+
+.pdf-btn:hover {
   background: #c0daef;
   transform: translateY(-1px);
 }

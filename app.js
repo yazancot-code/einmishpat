@@ -126,9 +126,10 @@ TRACTATES.forEach(t => {
 
 function buildDafDropdown(tractate) {
   const max = DAF_MAX[tractate] || 64;
+  const first = DAF_FIRST[tractate] || 2;
   const dafSel = document.getElementById('daf-num');
   dafSel.innerHTML = '';
-  for (let i = 2; i <= max; i++) {
+  for (let i = first; i <= max; i++) {
     const o = document.createElement('option');
     o.value = i;
     o.textContent = toHebrewNum(i);
@@ -592,6 +593,87 @@ function showError(msg) {
   document.getElementById('results-halachot').innerHTML =
     `<div class="error-box">${esc(msg)}</div>`;
   document.getElementById('results-mefarshim').innerHTML = '';
+}
+
+// ── Save as PDF ────────────────────────────────────────────────
+function saveAsPdf() {
+  const tractate = document.getElementById('tractate').value;
+  const dafNum = parseInt(document.getElementById('daf-num').value, 10);
+  if (!tractate || !dafNum) return;
+  const dafHeb = toHebrewNum(dafNum);
+
+  let tabTitle, contentEl;
+
+  if (activeTab === 'halachot') {
+    tabTitle = 'הלכות';
+    contentEl = document.getElementById('results-halachot');
+  } else if (activeTab === 'mefarshim') {
+    tabTitle = 'מפרשים';
+    contentEl = document.getElementById('results-mefarshim');
+  } else {
+    tabTitle = 'כללי הגמרא';
+    contentEl = document.getElementById('results-klalei');
+  }
+
+  const contentHtml = contentEl ? contentEl.innerHTML : '';
+  if (!contentHtml.trim()) {
+    alert('אין תוכן לשמירה. אנא טען דף תחילה.');
+    return;
+  }
+
+  const printWin = window.open('', '_blank');
+  if (!printWin) {
+    alert('לא ניתן לפתוח חלון חדש. אנא בדוק את חוסם החלונות הקופצים.');
+    return;
+  }
+
+  const pdfStyles = [
+    '* { box-sizing: border-box; margin: 0; padding: 0; }',
+    'body { font-family: "David","Frank Ruehl CLM","Times New Roman",serif; direction: rtl; color: #000; padding: 30px; font-size: 12pt; line-height: 1.6; }',
+    '.pdf-header { text-align: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 2px solid #333; }',
+    '.pdf-header h1 { font-size: 22pt; margin-bottom: 5px; }',
+    '.pdf-header h2 { font-size: 16pt; color: #444; font-weight: normal; }',
+    '.side-section { margin-bottom: 25px; }',
+    '.results-title { font-size: 14pt; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #999; }',
+    '.daf-badge { font-weight: bold; }',
+    '.entries { display: flex; flex-direction: column; gap: 10px; }',
+    '.entry { border: 1px solid #666; border-radius: 6px; margin-bottom: 10px; page-break-inside: avoid; }',
+    '.entry-head { padding: 6px 12px; background: #f0f0f0; border-bottom: 1px solid #999; }',
+    '.entry-seg-label { font-weight: bold; font-size: 11pt; }',
+    '.entry-body { padding: 8px 12px; }',
+    '.ref-header { display: flex; align-items: center; padding: 4px 0; }',
+    '.ref-title { font-weight: bold; font-size: 11pt; }',
+    '.halacha-box { padding: 8px 12px; border-right: 3px solid #333; white-space: pre-wrap; margin-bottom: 6px; }',
+    '.rambam-ref, .tur-ref, .smag-ref, .sa-ref { border: 1px solid #999; border-radius: 4px; margin-bottom: 6px; }',
+    '.benyehoyada-ref, .benayahu-ref { border: 1px solid #999; border-radius: 4px; margin-bottom: 6px; }',
+    '.klalei-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }',
+    '.klal-card { border: 1px solid #666; border-radius: 6px; page-break-inside: avoid; overflow: hidden; }',
+    '.klal-card-head { padding: 6px 12px; background: #f0f0f0; border-bottom: 1px solid #999; }',
+    '.klal-card-title { font-weight: bold; font-size: 11pt; }',
+    '.klal-card-makor { font-size: 9pt; color: #555; margin-top: 2px; }',
+    '.klal-card-body { padding: 8px 12px; white-space: pre-wrap; font-size: 11pt; }',
+    '.ref-actions, .link-ws, .toggle-text-btn, .text-truncated-note,',
+    '.spinner, .loading-msg, .klalei-search-row, .klalei-clear-btn, .klalei-count { display: none !important; }',
+    '.empty-msg, .error-box { text-align: center; padding: 20px; color: #666; font-size: 11pt; }',
+    '.pdf-header { page-break-after: avoid; }',
+    '@page { margin: 20mm 15mm; }',
+    '@media print { body { padding: 0; } }'
+  ].join('\n');
+
+  const pageTitle = esc(tractate) + ' דף ' + esc(dafHeb) + ' - ' + esc(tabTitle);
+
+  printWin.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>' + pageTitle + '</title><style>' + pdfStyles + '</style></head><body>');
+  // Only show header title for halachot/mefarshim tabs, not klalei
+  if (activeTab !== 'klalei') {
+    printWin.document.write('<div class="pdf-header"><h1>' + esc(tractate) + ' דף ' + esc(dafHeb) + '</h1><h2>' + esc(tabTitle) + '</h2></div>');
+  }
+  printWin.document.write(contentHtml);
+  printWin.document.write('<script>document.querySelectorAll(".text-toggle").forEach(function(e){if(e.dataset.full)e.textContent=e.dataset.full});<\/script>');
+  printWin.document.write('</body></html>');
+  printWin.document.close();
+  printWin.focus();
+
+  setTimeout(function () { printWin.print(); }, 500);
 }
 
 // ── Klalei Gemara search and render ──────────────────────────
